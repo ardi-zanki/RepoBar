@@ -82,6 +82,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.menuManager?.ensureStatusItems()
     }
 
+    func applicationWillTerminate(_: Notification) {
+        self.menuManager?.tearDownStatusItems()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
     }

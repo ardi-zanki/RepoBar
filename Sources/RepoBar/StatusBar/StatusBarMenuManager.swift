@@ -88,6 +88,19 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         )
     }
 
+    func tearDownStatusItems() {
+        self.removeKeyboardIssueStatusItem()
+        if let item = self.statusItem {
+            item.menu = nil
+            item.button?.image = nil
+            item.button?.title = ""
+            self.statusItem = nil
+            self.statusBar.removeStatusItem(item)
+        }
+        self.mainMenu = nil
+        self.auditStatusItems("tearDownStatusItems")
+    }
+
     var isAttached: Bool {
         self.statusItem != nil
     }
@@ -95,12 +108,13 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
     func ensureStatusItems() {
         if self.statusItem == nil {
             let item = self.statusBar.statusItem(withLength: NSStatusItem.variableLength)
-            item.autosaveName = "repobar-main"
             item.isVisible = true
             item.button?.imageScaling = .scaleNone
             self.attachMainMenu(to: item)
+            self.auditStatusItems("ensureStatusItems created main")
             return
         }
+        self.auditStatusItems("ensureStatusItems reused main")
     }
 
     func attachMainMenu(to statusItem: NSStatusItem) {
@@ -212,6 +226,7 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
             button.toolTip = self.keyboardIssueMenuTitle(for: match)
         }
         item.isVisible = true
+        self.auditStatusItems("syncKeyboardIssueStatusItem visible")
     }
 
     private func lazyKeyboardIssueStatusItem() -> NSStatusItem {
@@ -220,9 +235,9 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         }
 
         let item = self.statusBar.statusItem(withLength: NSStatusItem.variableLength)
-        item.autosaveName = "repobar-github-reference"
         item.button?.imageScaling = .scaleNone
         self.keyboardIssueStatusItem = item
+        self.auditStatusItems("lazyKeyboardIssueStatusItem created")
         return item
     }
 
@@ -235,6 +250,7 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         item.button?.title = ""
         self.keyboardIssueStatusItem = nil
         self.statusBar.removeStatusItem(item)
+        self.auditStatusItems("removeKeyboardIssueStatusItem")
     }
 
     private func lazyKeyboardIssueMenu() -> NSMenu {
@@ -345,45 +361,12 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         button.imageScaling = .scaleNone
     }
 
-    private func fallbackStatusImage() -> NSImage {
-        let symbolName = self.appState.session.account.isLoggedIn ? "tray.fill" : "tray"
-        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "RepoBar")
-            ?? NSImage(size: NSSize(width: 18, height: 18))
-        image.isTemplate = true
-        return image
-    }
-
-    private func setButtonImage(_ image: NSImage, for button: NSStatusBarButton) {
-        if button.image === image { return }
-        button.image = image
-    }
-
-    private func setButtonTitle(_ title: String?, for button: NSStatusBarButton) {
-        let rawValue = title ?? ""
-        let value = rawValue.isEmpty || button.image == nil ? rawValue : " \(rawValue)"
-        if button.title != value {
-            button.title = value
-        }
-        let position: NSControl.ImagePosition = value.isEmpty ? .imageOnly : .imageLeft
-        if button.imagePosition != position {
-            button.imagePosition = position
-        }
-    }
-
-    private func rateLimitTooltip(juice: RateLimitJuice) -> String {
-        let rest = self.rateLimitTooltipPart(label: "REST", remaining: juice.restRemaining, limit: juice.restLimit)
-        let graphQL = self.rateLimitTooltipPart(label: "GraphQL", remaining: juice.graphQLRemaining, limit: juice.graphQLLimit)
-        return "RepoBar GitHub rate limits: \(rest), \(graphQL)"
-    }
-
-    private func rateLimitTooltipPart(label: String, remaining: Int?, limit: Int?) -> String {
-        if let remaining, let limit {
-            return "\(label) \(remaining)/\(limit)"
-        }
-        if let remaining {
-            return "\(label) \(remaining) left"
-        }
-        return "\(label) unknown"
+    private func auditStatusItems(_ context: String) {
+        #if DEBUG
+            let main = self.statusItem.map { self.objectID($0) } ?? "nil"
+            let watcher = self.keyboardIssueStatusItem.map { self.objectID($0) } ?? "nil"
+            self.logMenuEvent("status item audit \(context) main=\(main) watcher=\(watcher)")
+        #endif
     }
 
     @objc func toggleIssueLabelFilter(_ sender: NSMenuItem) {
@@ -762,4 +745,47 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
             self.keyboardIssueMenu
         }
     #endif
+}
+
+private extension StatusBarMenuManager {
+    func fallbackStatusImage() -> NSImage {
+        let symbolName = self.appState.session.account.isLoggedIn ? "tray.fill" : "tray"
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "RepoBar")
+            ?? NSImage(size: NSSize(width: 18, height: 18))
+        image.isTemplate = true
+        return image
+    }
+
+    func setButtonImage(_ image: NSImage, for button: NSStatusBarButton) {
+        if button.image === image { return }
+        button.image = image
+    }
+
+    func setButtonTitle(_ title: String?, for button: NSStatusBarButton) {
+        let rawValue = title ?? ""
+        let value = rawValue.isEmpty || button.image == nil ? rawValue : " \(rawValue)"
+        if button.title != value {
+            button.title = value
+        }
+        let position: NSControl.ImagePosition = value.isEmpty ? .imageOnly : .imageLeft
+        if button.imagePosition != position {
+            button.imagePosition = position
+        }
+    }
+
+    func rateLimitTooltip(juice: RateLimitJuice) -> String {
+        let rest = self.rateLimitTooltipPart(label: "REST", remaining: juice.restRemaining, limit: juice.restLimit)
+        let graphQL = self.rateLimitTooltipPart(label: "GraphQL", remaining: juice.graphQLRemaining, limit: juice.graphQLLimit)
+        return "RepoBar GitHub rate limits: \(rest), \(graphQL)"
+    }
+
+    func rateLimitTooltipPart(label: String, remaining: Int?, limit: Int?) -> String {
+        if let remaining, let limit {
+            return "\(label) \(remaining)/\(limit)"
+        }
+        if let remaining {
+            return "\(label) \(remaining) left"
+        }
+        return "\(label) unknown"
+    }
 }

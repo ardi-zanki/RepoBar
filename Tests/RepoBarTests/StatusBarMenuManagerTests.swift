@@ -14,6 +14,7 @@ struct StatusBarMenuManagerTests {
         let item = try #require(manager.statusItem)
         let button = try #require(item.button)
         #expect(item.menu != nil)
+        #expect(item.autosaveName != "repobar-main")
         #expect(button.isEnabled)
         #expect(!self.containsHostingView(button))
     }
@@ -31,6 +32,7 @@ struct StatusBarMenuManagerTests {
         let menu = try #require(manager.keyboardIssueMenuForTesting())
         #expect(item.isVisible)
         #expect(item.menu === menu)
+        #expect(item.autosaveName != "repobar-github-reference")
         let button = try #require(item.button)
         #expect(button.isEnabled)
         #expect(!self.containsHostingView(button))
