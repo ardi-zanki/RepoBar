@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 import Observation
 import RepoBarCore
@@ -20,6 +21,7 @@ final class AppState {
     private var tokenRefreshTask: Task<Void, Never>?
     var menuRefreshTask: Task<Void, Never>?
     private var gitHubReferenceMonitor: GitHubReferenceMonitor?
+    private var gitHubReferenceResolutionID = UUID()
     var refreshTaskToken = UUID()
     let hydrateConcurrencyLimit = 4
     var prefetchTask: Task<Void, Never>?
@@ -148,22 +150,57 @@ final class AppState {
     private func clearGitHubReference() async {
         guard self.session.settings.gitHubReferenceMonitor.enabled else { return }
 
+        self.gitHubReferenceResolutionID = UUID()
         self.setGitHubReferenceMatches([])
     }
 
     private func resolveGitHubReferences(_ queries: [GitHubReferenceQuery], sourceText: String) async {
         guard self.session.settings.gitHubReferenceMonitor.enabled else { return }
 
+        let resolutionID = UUID()
+        self.gitHubReferenceResolutionID = resolutionID
         let scopedQueries = await self.queries(queries, applyingLocalRepositoryContextFrom: sourceText)
-        var matches: [GitHubReferenceMatch] = []
-        var seen: Set<URL> = []
-        for query in scopedQueries.prefix(AppLimits.GitHubReferenceMonitor.queryLimit) {
-            guard let match = await self.resolveGitHubReferenceMatch(query) else { continue }
-            guard seen.insert(match.url).inserted else { continue }
+        guard self.gitHubReferenceResolutionID == resolutionID else { return }
 
-            matches.append(match)
+        let limitedQueries = Array(scopedQueries.prefix(AppLimits.GitHubReferenceMonitor.queryLimit))
+        let repositories = self.githubReferenceCandidateRepositories()
+        let github = self.github
+        var matchesByIndex: [Int: GitHubReferenceMatch] = [:]
+        var seen: Set<URL> = []
+
+        let indexedQueries = Array(limitedQueries.enumerated())
+        for chunk in indexedQueries.chunks(ofCount: AppLimits.GitHubReferenceMonitor.resolutionConcurrencyLimit) {
+            await withTaskGroup(of: (Int, GitHubReferenceMatch?).self) { group in
+                for (index, query) in chunk {
+                    group.addTask {
+                        let match = await Self.resolveGitHubReferenceMatch(
+                            query: query,
+                            repositories: repositories,
+                            github: github
+                        )
+                        return (index, match)
+                    }
+                }
+
+                for await (index, match) in group {
+                    guard self.gitHubReferenceResolutionID == resolutionID else {
+                        group.cancelAll()
+                        return
+                    }
+                    guard let match, seen.insert(match.url).inserted else { continue }
+
+                    matchesByIndex[index] = match
+                    let orderedMatches = matchesByIndex.keys.sorted().compactMap { matchesByIndex[$0] }
+                    self.setGitHubReferenceMatches(orderedMatches)
+                }
+            }
+
+            guard self.gitHubReferenceResolutionID == resolutionID else { return }
         }
-        self.setGitHubReferenceMatches(matches)
+
+        if matchesByIndex.isEmpty {
+            self.setGitHubReferenceMatches([])
+        }
     }
 
     private func queries(
@@ -179,18 +216,21 @@ final class AppState {
         return GitHubReferenceLocalContext.queries(queries, applyingRepositoryFullName: repositoryFullName)
     }
 
-    private func resolveGitHubReferenceMatch(_ query: GitHubReferenceQuery) async -> GitHubReferenceMatch? {
-        let repositories = self.githubReferenceCandidateRepositories()
+    private nonisolated static func resolveGitHubReferenceMatch(
+        query: GitHubReferenceQuery,
+        repositories: [Repository],
+        github: GitHubClient
+    ) async -> GitHubReferenceMatch? {
         let candidateRepositories = if let repositoryFullName = query.repositoryFullName {
             repositories.filter { $0.fullName.caseInsensitiveCompare(repositoryFullName) == .orderedSame }
         } else {
             repositories
         }
         guard candidateRepositories.isEmpty == false else {
-            return await self.github.liveReferenceMatch(query: query)
+            return await github.liveReferenceMatch(query: query)
         }
 
-        let cachedMatches = await self.github.cachedReferenceMatches(
+        let cachedMatches = await github.cachedReferenceMatches(
             query: query,
             repositories: candidateRepositories,
             limit: AppLimits.GitHubReferenceMonitor.cacheLookupLimit
@@ -199,7 +239,7 @@ final class AppState {
             return match
         }
 
-        let liveMatch = await self.github.liveReferenceMatch(
+        let liveMatch = await github.liveReferenceMatch(
             query: query,
             repositories: Array(candidateRepositories.prefix(AppLimits.GitHubReferenceMonitor.liveLookupLimit))
         )
@@ -207,7 +247,9 @@ final class AppState {
             return liveMatch
         }
 
-        return await self.github.liveReferenceMatch(query: query)
+        guard query.repositoryFullName == nil else { return nil }
+
+        return await github.liveReferenceMatch(query: query)
     }
 
     private func githubReferenceCandidateRepositories() -> [Repository] {
