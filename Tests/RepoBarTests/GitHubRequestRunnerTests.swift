@@ -21,7 +21,7 @@ struct GitHubRequestRunnerTests {
         let backoff = BackoffTracker()
         let retryAfter = Date().addingTimeInterval(30)
         await backoff.setCooldown(url: url, until: retryAfter)
-        let runner = GitHubRequestRunner(backoff: backoff)
+        let runner = GitHubRequestRunner(etagCache: ETagCache(), backoff: backoff)
 
         do {
             _ = try await runner.get(url: url, token: "token")

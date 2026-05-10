@@ -47,6 +47,7 @@ public enum RateLimitStatusFormatter {
     public static func compactSummary(
         diagnostics: DiagnosticsSummary,
         cacheSummary: RepoBarCacheSummary?,
+        authMethod _: AuthMethod? = nil,
         now: Date = Date()
     ) -> String {
         if let blocker = currentBlockerRows(
@@ -79,6 +80,7 @@ public enum RateLimitStatusFormatter {
     public static func sections(
         diagnostics: DiagnosticsSummary,
         cacheSummary: RepoBarCacheSummary?,
+        authMethod: AuthMethod? = nil,
         now: Date = Date()
     ) -> [RateLimitDisplaySection] {
         var sections: [RateLimitDisplaySection] = []
@@ -97,6 +99,12 @@ public enum RateLimitStatusFormatter {
             sections.append(RateLimitDisplaySection(
                 title: "Current Status",
                 rows: ["No active GitHub blocker."]
+            ))
+        }
+        if let authMethod {
+            sections.append(RateLimitDisplaySection(
+                title: "Budget Model",
+                resourceRows: Self.budgetModelRows(authMethod: authMethod, isCoreBlocked: blockerRows.contains { $0.resource == "core" })
             ))
         }
 
@@ -222,7 +230,7 @@ public enum RateLimitStatusFormatter {
             }
             let detailText = [
                 errorDetail,
-                "Shared token budget; other tools using the same token count here."
+                Self.sharedUserBudgetText
             ]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
@@ -267,6 +275,42 @@ public enum RateLimitStatusFormatter {
         }
 
         return rows
+    }
+
+    private static func budgetModelRows(authMethod: AuthMethod, isCoreBlocked: Bool) -> [RateLimitDisplayRow] {
+        var rows: [RateLimitDisplayRow] = [
+            RateLimitDisplayRow(text: Self.authSourceText(for: authMethod)),
+            RateLimitDisplayRow(text: Self.budgetActorText(for: authMethod)),
+            RateLimitDisplayRow(text: "PATs, OAuth apps, GitHub App user tokens, and gh CLI requests for the same user usually draw from one shared REST core budget.")
+        ]
+        if isCoreBlocked {
+            rows.append(RateLimitDisplayRow(text: Self.ghCLIExceptionText))
+        }
+        return rows
+    }
+
+    private static let sharedUserBudgetText = "Shared GitHub user budget; RepoBar, PATs, OAuth/GitHub App user tokens, " +
+        "and gh CLI requests for this account can spend this core quota. Extra tokens do not create extra user quota."
+
+    private static let ghCLIExceptionText = "gh CLI may still work after RepoBar/PAT/OAuth requests are blocked because GitHub " +
+        "grants the CLI app extra allowance; using gh still spends normal user quota first."
+
+    private static func authSourceText(for authMethod: AuthMethod) -> String {
+        switch authMethod {
+        case .oauth:
+            "RepoBar auth: GitHub App user token"
+        case .pat:
+            "RepoBar auth: PAT"
+        }
+    }
+
+    private static func budgetActorText(for authMethod: AuthMethod) -> String {
+        switch authMethod {
+        case .oauth:
+            "Budget actor: signed-in GitHub user"
+        case .pat:
+            "Budget actor: token owner"
+        }
     }
 
     private static func compactBlockerSummary(_ row: RateLimitDisplayRow) -> String {

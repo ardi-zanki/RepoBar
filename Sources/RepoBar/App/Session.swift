@@ -41,7 +41,8 @@ final class Session {
     var rateLimitDisplayState: RateLimitDisplayState {
         RateLimitDisplayState(
             diagnostics: self.rateLimitDiagnostics,
-            cacheSummary: self.rateLimitCacheSummary
+            cacheSummary: self.rateLimitCacheSummary,
+            authMethod: self.settings.authMethod
         )
     }
 }

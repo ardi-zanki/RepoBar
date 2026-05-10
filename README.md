@@ -90,6 +90,8 @@ RepoBar is designed to open from local data first and spend GitHub requests care
 
 It stores REST ETags, response bodies, GraphQL responses, recent lists, repository detail data, and rate-limit state in RepoBar-owned storage. First-open menu rows can be seeded from the persistent cache, then refreshed in the background.
 
+GitHub core limits are usually shared by the GitHub user or integration actor, not by each token string. A PAT, another OAuth app, another GitHub App user token, and `gh` CLI requests for the same account can draw from one shared user budget. The `gh` CLI may keep working after other requests are blocked because GitHub grants that app extra allowance, but using `gh` still spends the normal user budget first.
+
 The optional typed GitHub reference monitor is cache-first too: when enabled in Advanced settings, RepoBar watches issue-number patterns and commit-like hashes, looks for matching cached issues, pull requests, or commits in accessible repositories, and falls back to live GitHub lookups on cache misses. The best match appears as a separate menu bar item that opens in your default browser. Global monitoring requires granting RepoBar Accessibility permission in System Settings.
 
 ### Sync With Gitcrawl Archives

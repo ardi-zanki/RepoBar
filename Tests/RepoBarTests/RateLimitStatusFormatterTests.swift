@@ -349,11 +349,39 @@ struct RateLimitStatusFormatterTests {
         )
 
         #expect(summary.contains("Blocked: REST core blocked"))
-        #expect(summary.contains("Shared token budget"))
+        #expect(summary.contains("Shared GitHub user budget"))
         #expect(sections.map(\.title) == ["Current Blocker", "REST Core", "GraphQL"])
         #expect(sections[0].resourceRows.first?.quotaText == "0 left")
         #expect(sections[0].resourceRows.first?.resetText == "resets in 2 min.")
         #expect(sections[1].resourceRows.first?.quotaText == "2692/5000")
         #expect(sections[2].resourceRows.first?.quotaText == "4532/5000")
+    }
+
+    @Test
+    func `budget model explains auth actor and gh cli exception`() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 8000)
+        let diagnostics = try DiagnosticsSummary(
+            apiHost: #require(URL(string: "https://api.github.com")),
+            rateLimitReset: now.addingTimeInterval(120),
+            lastRateLimitError: "GitHub rate limit hit; resets in 2 min.",
+            etagEntries: 0,
+            backoffEntries: 0,
+            restRateLimit: nil,
+            graphQLRateLimit: nil,
+            rateLimitResources: nil
+        )
+
+        let sections = RateLimitStatusFormatter.sections(
+            diagnostics: diagnostics,
+            cacheSummary: nil,
+            authMethod: .pat,
+            now: now
+        )
+
+        #expect(sections.map(\.title).prefix(2) == ["Current Blocker", "Budget Model"])
+        #expect(sections[1].rows.contains("RepoBar auth: PAT"))
+        #expect(sections[1].rows.contains("Budget actor: token owner"))
+        #expect(sections[1].rows.contains { $0.contains("one shared REST core budget") })
+        #expect(sections[1].rows.contains { $0.contains("gh CLI may still work") })
     }
 }
