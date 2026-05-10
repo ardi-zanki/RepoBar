@@ -8,7 +8,7 @@ final class GitHubReferenceBrowserMenuItemView: NSView {
         static let width: CGFloat = 740
         static let minimumHeight: CGFloat = 680
         static let maximumHeight: CGFloat = 980
-        static let initialScrollOffset = 360
+        static let initialScrollOffset = 220
         static let visibleScreenHeightMultiplier: CGFloat = 0.62
     }
 
