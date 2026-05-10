@@ -3,6 +3,7 @@
 ## 0.5.2 - Unreleased
 
 - Improve GitHub reference parsing for grouped `owner/repo: #1, #2` issue lists.
+- Rename the GitHub rate-limit menu to GitHub API Status and show the current blocker, shared-token note, endpoint cooldowns, live bucket quotas, and sample age as separate lines.
 - Bring the iOS app closer to macOS parity with repository search/filter/sort/owner controls, GitHub rate-limit diagnostics, a manual GitHub reference resolver, share-sheet handoff, and inline reference previews.
 
 ## 0.5.1 - 2026-05-10

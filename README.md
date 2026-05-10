@@ -31,7 +31,7 @@ RepoBar's main menu is a repository dashboard:
 - A contribution header for the signed-in GitHub account.
 - Filters for all repositories, pinned repositories, local repositories, and work-focused views.
 - A profile submenu with recent GitHub activity.
-- A GitHub rate-limit submenu showing live REST/GraphQL state and persisted REST resource headers.
+- A GitHub API status submenu showing current blockers, live REST/GraphQL state, and persisted REST resource headers.
 - Quick access to Preferences, About, and Quit.
 
 Each repository has a rich submenu:

@@ -28,7 +28,7 @@ public enum MainMenuItemID: String, CaseIterable, Codable, Hashable, Sendable {
         case .signInAction: "Sign In"
         case .contributionHeader: "Contribution Header"
         case .statusBanner: "Status Banner"
-        case .rateLimits: "GitHub Rate Limits"
+        case .rateLimits: "GitHub API Status"
         case .filters: "Menu Filters"
         case .repoList: "Repository Cards"
         case .preferences: "Preferences"
@@ -44,7 +44,7 @@ public enum MainMenuItemID: String, CaseIterable, Codable, Hashable, Sendable {
         case .signInAction: "GitHub sign-in action"
         case .contributionHeader: "Heatmap header + submenu"
         case .statusBanner: "Rate-limit or error banner"
-        case .rateLimits: "Rate-limit diagnostics submenu"
+        case .rateLimits: "Current blocker and rate-limit diagnostics"
         case .filters: "Pinned/hidden filter chips"
         case .repoList: "Repo cards + inline heatmap"
         case .preferences: nil
