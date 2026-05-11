@@ -109,6 +109,22 @@ struct CLIEndToEndTests {
 
     @Test
     @MainActor
+    func `reference translate command parses copied workflow run url`() async throws {
+        let output = try await runCLI([
+            "reference-translate",
+            "https://github.com/openclaw/songsee/actions/runs/25620622163",
+            "--json"
+        ])
+        let data = try #require(output.data(using: .utf8))
+        let decoded = try JSONDecoder().decode(ReferenceTranslationOutput.self, from: data)
+        #expect(decoded.matched)
+        #expect(decoded.query == "repositoryWorkflowRun")
+        #expect(decoded.repositoryFullName == "openclaw/songsee")
+        #expect(decoded.runID == 25_620_622_163)
+    }
+
+    @Test
+    @MainActor
     func `reference translate command emits multiple scoped issue matches`() async throws {
         let output = try await runCLI([
             "reference-translate",

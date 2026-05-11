@@ -180,6 +180,12 @@ struct RepoBarCoreModelsTests {
                 hash: "ffd212ca43abcdef"
             ).displayText == "openclaw/openclaw@ffd212ca43"
         )
+        #expect(
+            GitHubReferenceQuery.repositoryWorkflowRun(
+                repositoryFullName: "openclaw/songsee",
+                runID: 25_620_622_163
+            ).displayText == "openclaw/songsee run 25620622163"
+        )
         let scoped = GitHubReferenceQuery.repositoryIssueNumber(
             repositoryFullName: "openclaw/openclaw",
             number: 73655

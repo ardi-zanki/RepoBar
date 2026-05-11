@@ -24,6 +24,8 @@ extension GitHubRestAPI {
             case let .commitHash(hash),
                  let .repositoryCommitHash(_, hash):
                 matches.append(contentsOf: self.cachedCommitMatches(query: query, hash: hash, repo: repo, context: context))
+            case let .repositoryWorkflowRun(_, runID):
+                matches.append(contentsOf: self.cachedWorkflowRunMatches(query: query, runID: runID, repo: repo, context: context))
             }
         }
         return matches
@@ -39,6 +41,8 @@ extension GitHubRestAPI {
             case let .commitHash(hash),
                  let .repositoryCommitHash(_, hash):
                 await self.liveCommitMatch(query: query, hash: hash, repo: repo)
+            case let .repositoryWorkflowRun(_, runID):
+                await self.liveWorkflowRunMatch(query: query, runID: runID, repo: repo)
             }
             if let match {
                 matches.append(match)
@@ -55,6 +59,8 @@ extension GitHubRestAPI {
             await self.liveIssueNumberMatch(query: query, number: number, repositoryFullName: repositoryFullName)
         case let .repositoryCommitHash(repositoryFullName, hash):
             await self.liveCommitMatch(query: query, hash: hash, repositoryFullName: repositoryFullName)
+        case let .repositoryWorkflowRun(repositoryFullName, runID):
+            await self.liveWorkflowRunMatch(query: query, runID: runID, repositoryFullName: repositoryFullName)
         }
     }
 
@@ -101,6 +107,37 @@ extension GitHubRestAPI {
                     state: .open,
                     createdAt: $0.createdAt,
                     updatedAt: $0.updatedAt
+                )
+            })
+        }
+        return matches
+    }
+
+    private func cachedWorkflowRunMatches(
+        query: GitHubReferenceQuery,
+        runID: Int64,
+        repo: Repository,
+        context: GitHubReferenceCacheLookupContext
+    ) -> [GitHubReferenceMatch] {
+        let urls = self.cachedRecentWorkflowRunURLs(baseURL: context.baseURL, owner: repo.owner, name: repo.name, limit: context.limit)
+        var matches: [GitHubReferenceMatch] = []
+        for url in urls {
+            guard let cached = context.cache.cached(url: url),
+                  let runs = try? GitHubRecentDecoders.decodeRecentWorkflowRuns(from: cached.data)
+            else { continue }
+
+            matches.append(contentsOf: runs.filter { self.workflowRunID(from: $0.url) == runID }.map {
+                GitHubReferenceMatch(
+                    query: query,
+                    title: $0.name,
+                    url: $0.url,
+                    repositoryFullName: repo.fullName,
+                    kind: .workflowRun,
+                    state: nil,
+                    createdAt: nil,
+                    updatedAt: $0.updatedAt,
+                    bodyPreview: self.workflowRunPreview(status: $0.status, conclusion: $0.conclusion, event: $0.event, branch: $0.branch),
+                    authorLogin: $0.actorLogin
                 )
             })
         }
@@ -191,6 +228,33 @@ extension GitHubRestAPI {
         }
     }
 
+    private func liveWorkflowRunMatch(query: GitHubReferenceQuery, runID: Int64, repo: Repository) async -> GitHubReferenceMatch? {
+        do {
+            let token = try await tokenProvider()
+            let baseURL = await apiHost()
+            let url = baseURL.appending(path: "/repos/\(repo.owner)/\(repo.name)/actions/runs/\(runID)")
+            let (data, _) = try await authorizedGet(url: url, token: token)
+            let response = try GitHubDecoding.decode(WorkflowRunLookupResponse.self, from: data)
+            return response.match(query: query, repositoryFullName: repo.fullName)
+        } catch {
+            return nil
+        }
+    }
+
+    private func liveWorkflowRunMatch(query: GitHubReferenceQuery, runID: Int64, repositoryFullName: String) async -> GitHubReferenceMatch? {
+        guard let parts = query.repositoryOwnerAndName else { return nil }
+
+        do {
+            let baseURL = await apiHost()
+            let url = baseURL.appending(path: "/repos/\(parts.owner)/\(parts.name)/actions/runs/\(runID)")
+            let data = try await self.referenceLookupData(url: url)
+            let response = try GitHubDecoding.decode(WorkflowRunLookupResponse.self, from: data)
+            return response.match(query: query, repositoryFullName: repositoryFullName)
+        } catch {
+            return nil
+        }
+    }
+
     private func referenceLookupData(url: URL) async throws -> Data {
         if let token = try? await tokenProvider(), token.isEmpty == false {
             return try await authorizedGet(url: url, token: token, useETag: false).0
@@ -248,6 +312,50 @@ extension GitHubRestAPI {
             components.queryItems = [URLQueryItem(name: "per_page", value: "\(limit)")]
             return components.url
         }
+    }
+
+    private func cachedRecentWorkflowRunURLs(baseURL: URL, owner: String, name: String, limit: Int) -> [URL] {
+        let limits = Array(Set([max(1, min(limit, 100)), 20, 100])).sorted()
+        return limits.compactMap { limit in
+            var components = URLComponents(url: baseURL.appending(path: "/repos/\(owner)/\(name)/actions/runs"), resolvingAgainstBaseURL: false)!
+            components.queryItems = [URLQueryItem(name: "per_page", value: "\(limit)")]
+            return components.url
+        }
+    }
+
+    private func workflowRunID(from url: URL) -> Int64? {
+        let parts = url.path
+            .split(separator: "/")
+            .map(String.init)
+        guard parts.count >= 5,
+              parts[2].caseInsensitiveCompare("actions") == .orderedSame,
+              parts[3].caseInsensitiveCompare("runs") == .orderedSame
+        else { return nil }
+
+        return Int64(parts[4])
+    }
+
+    private func workflowRunPreview(status: CIStatus, conclusion: String?, event: String?, branch: String?) -> String? {
+        var parts: [String] = []
+        switch status {
+        case .passing:
+            parts.append("Passing")
+        case .failing:
+            parts.append("Failing")
+        case .pending:
+            parts.append("Pending")
+        case .unknown:
+            if let conclusion, conclusion.isEmpty == false {
+                parts.append(conclusion)
+            }
+        }
+        if let event, event.isEmpty == false {
+            parts.append(event)
+        }
+        if let branch, branch.isEmpty == false {
+            parts.append(branch)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " - ")
     }
 }
 
@@ -361,5 +469,84 @@ private struct CommitLookupResponse: Decodable {
 
     struct CommitAuthor: Decodable {
         let date: Date
+    }
+}
+
+private struct WorkflowRunLookupResponse: Decodable {
+    let name: String?
+    let displayTitle: String?
+    let runNumber: Int?
+    let event: String?
+    let headBranch: String?
+    let status: String?
+    let conclusion: String?
+    let htmlUrl: URL
+    let createdAt: Date?
+    let updatedAt: Date?
+    let actor: LookupActor?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case displayTitle = "display_title"
+        case runNumber = "run_number"
+        case event
+        case headBranch = "head_branch"
+        case status
+        case conclusion
+        case htmlUrl = "html_url"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case actor
+    }
+
+    func match(query: GitHubReferenceQuery, repositoryFullName: String) -> GitHubReferenceMatch {
+        let title = self.title
+        return GitHubReferenceMatch(
+            query: query,
+            title: title,
+            url: self.htmlUrl,
+            repositoryFullName: repositoryFullName,
+            kind: .workflowRun,
+            state: nil,
+            createdAt: self.createdAt,
+            updatedAt: self.updatedAt ?? self.createdAt ?? Date.distantPast,
+            bodyPreview: self.preview,
+            authorLogin: self.actor?.login
+        )
+    }
+
+    private var title: String {
+        let preferred = (self.displayTitle ?? self.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if preferred.isEmpty == false { return preferred }
+        if let runNumber { return "Run #\(runNumber)" }
+        return "Workflow run"
+    }
+
+    private var preview: String? {
+        var parts: [String] = []
+        let mapped = GitHubStatusMapper.ciStatus(fromStatus: self.status, conclusion: self.conclusion)
+        switch mapped {
+        case .passing:
+            parts.append("Passing")
+        case .failing:
+            parts.append("Failing")
+        case .pending:
+            parts.append("Pending")
+        case .unknown:
+            if let conclusion, conclusion.isEmpty == false {
+                parts.append(conclusion)
+            }
+        }
+        if let event, event.isEmpty == false {
+            parts.append(event)
+        }
+        if let headBranch, headBranch.isEmpty == false {
+            parts.append(headBranch)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " - ")
+    }
+
+    struct LookupActor: Decodable {
+        let login: String
     }
 }

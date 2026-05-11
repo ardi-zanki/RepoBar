@@ -157,6 +157,13 @@ public enum GitHubReferenceTranslator {
             guard self.isCommitHash(hash, allowNumericOnly: true) else { return nil }
 
             return .repositoryCommitHash(repositoryFullName: repositoryFullName, hash: hash)
+        case "actions":
+            guard pathParts.count >= 5,
+                  pathParts[3].lowercased() == "runs",
+                  let runID = Int64(pathParts[4])
+            else { return nil }
+
+            return .repositoryWorkflowRun(repositoryFullName: repositoryFullName, runID: runID)
         default:
             guard let hash = self.commitHash(in: pathParts.dropFirst(2)) else { return nil }
 
@@ -303,7 +310,7 @@ public enum GitHubReferenceTranslator {
             return .repositoryIssueNumber(repositoryFullName: repositoryFullName, number: number)
         case let .commitHash(hash):
             return .repositoryCommitHash(repositoryFullName: repositoryFullName, hash: hash)
-        case .repositoryIssueNumber, .repositoryCommitHash:
+        case .repositoryIssueNumber, .repositoryCommitHash, .repositoryWorkflowRun:
             return query
         }
     }

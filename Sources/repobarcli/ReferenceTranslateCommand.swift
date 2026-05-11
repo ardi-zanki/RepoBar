@@ -60,6 +60,9 @@ struct ReferenceTranslateCommand: CommanderRunnableCommand {
         if let hash = result.hash {
             print("hash: \(hash)")
         }
+        if let runID = result.runID {
+            print("run: \(runID)")
+        }
         if result.matches.count > 1 {
             print("matches: \(result.matches.count)")
             for match in result.matches {
@@ -76,6 +79,7 @@ struct ReferenceTranslationOutput: Codable, Equatable {
         let repositoryFullName: String?
         let number: Int?
         let hash: String?
+        let runID: Int64?
 
         init(query: GitHubReferenceQuery) {
             self.query = ReferenceTranslationOutput.queryName(query)
@@ -83,6 +87,7 @@ struct ReferenceTranslationOutput: Codable, Equatable {
             self.repositoryFullName = query.repositoryFullName
             self.number = ReferenceTranslationOutput.number(query)
             self.hash = ReferenceTranslationOutput.hash(query)
+            self.runID = ReferenceTranslationOutput.runID(query)
         }
     }
 
@@ -93,6 +98,7 @@ struct ReferenceTranslationOutput: Codable, Equatable {
     let repositoryFullName: String?
     let number: Int?
     let hash: String?
+    let runID: Int64?
     let matches: [Match]
 
     init(input: String, query: GitHubReferenceQuery?) {
@@ -108,6 +114,7 @@ struct ReferenceTranslationOutput: Codable, Equatable {
         self.repositoryFullName = primaryQuery?.repositoryFullName
         self.number = primaryQuery.flatMap(Self.number)
         self.hash = primaryQuery.flatMap(Self.hash)
+        self.runID = primaryQuery.flatMap(Self.runID)
         self.matches = queries.map(Match.init)
     }
 
@@ -121,6 +128,8 @@ struct ReferenceTranslationOutput: Codable, Equatable {
             "commitHash"
         case .repositoryCommitHash:
             "repositoryCommitHash"
+        case .repositoryWorkflowRun:
+            "repositoryWorkflowRun"
         }
     }
 
@@ -128,17 +137,26 @@ struct ReferenceTranslationOutput: Codable, Equatable {
         switch query {
         case let .issueNumber(number), let .repositoryIssueNumber(_, number):
             number
-        case .commitHash, .repositoryCommitHash:
+        case .commitHash, .repositoryCommitHash, .repositoryWorkflowRun:
             nil
         }
     }
 
     private static func hash(_ query: GitHubReferenceQuery) -> String? {
         switch query {
-        case .issueNumber, .repositoryIssueNumber:
+        case .issueNumber, .repositoryIssueNumber, .repositoryWorkflowRun:
             nil
         case let .commitHash(hash), let .repositoryCommitHash(_, hash):
             hash
+        }
+    }
+
+    private static func runID(_ query: GitHubReferenceQuery) -> Int64? {
+        switch query {
+        case .issueNumber, .repositoryIssueNumber, .commitHash, .repositoryCommitHash:
+            nil
+        case let .repositoryWorkflowRun(_, runID):
+            runID
         }
     }
 }

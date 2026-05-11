@@ -213,7 +213,12 @@ final class AppState {
             in: text,
             localRepoIndex: self.session.localRepoIndex
         )
-        guard let repositoryFullName else { return queries }
+        guard let repositoryFullName else {
+            return await GitHubReferenceLocalContext.queries(
+                queries,
+                applyingLocalCommitContextFrom: self.session.localRepoIndex
+            )
+        }
 
         return GitHubReferenceTranslator.queries(
             from: text,

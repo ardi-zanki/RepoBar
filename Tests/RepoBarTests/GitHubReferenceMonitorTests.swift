@@ -128,6 +128,14 @@ struct GitHubReferenceMonitorTests {
     }
 
     @Test
+    func `github actions run urls become repository scoped workflow run queries`() {
+        #expect(
+            GitHubReferenceTranslator.query(from: "https://github.com/openclaw/songsee/actions/runs/25620622163") ==
+                .repositoryWorkflowRun(repositoryFullName: "openclaw/songsee", runID: 25_620_622_163)
+        )
+    }
+
+    @Test
     func `multiple bare issue references inherit repository context`() {
         let text = """
         Found 5 more in openclaw/gogcli after clean main pull.
@@ -261,6 +269,39 @@ struct GitHubReferenceMonitorTests {
     }
 
     @Test
+    func `bare commit references inherit unique local commit context`() async throws {
+        let repoURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: repoURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: repoURL) }
+
+        try runGit(["init"], in: repoURL)
+        try runGit(["config", "user.email", "repobar-tests@example.com"], in: repoURL)
+        try runGit(["config", "user.name", "RepoBar Tests"], in: repoURL)
+        try "hello\n".write(to: repoURL.appendingPathComponent("README.md"), atomically: true, encoding: .utf8)
+        try runGit(["add", "."], in: repoURL)
+        try runGit(["commit", "-m", "init"], in: repoURL)
+        let sha = try runGit(["rev-parse", "HEAD"], in: repoURL).trimmingCharacters(in: .whitespacesAndNewlines)
+        let shortSHA = String(sha.prefix(7))
+
+        let status = LocalRepoStatus(
+            path: repoURL,
+            name: "RepoBar",
+            fullName: "steipete/RepoBar",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        let queries = await GitHubReferenceLocalContext.queries(
+            [.commitHash(shortSHA)],
+            applyingLocalCommitContextFrom: LocalRepoIndex(statuses: [status])
+        )
+
+        #expect(queries == [.repositoryCommitHash(repositoryFullName: "steipete/RepoBar", hash: shortSHA)])
+    }
+
+    @Test
     func `local repository context beats prose slash words`() {
         let text = """
         - #2124 header avatar controls
@@ -288,4 +329,25 @@ struct GitHubReferenceMonitorTests {
             "openclaw/clawhub#1712"
         ])
     }
+}
+
+@discardableResult
+private func runGit(_ arguments: [String], in directory: URL) throws -> String {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    process.arguments = ["git"] + arguments
+    process.currentDirectoryURL = directory
+    let output = Pipe()
+    let error = Pipe()
+    process.standardOutput = output
+    process.standardError = error
+    try process.run()
+    process.waitUntilExit()
+    let data = output.fileHandleForReading.readDataToEndOfFile()
+    if process.terminationStatus != 0 {
+        let errorData = error.fileHandleForReading.readDataToEndOfFile()
+        let message = String(data: errorData, encoding: .utf8) ?? "git failed"
+        throw NSError(domain: "GitHubReferenceMonitorTests", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: message])
+    }
+    return String(data: data, encoding: .utf8) ?? ""
 }

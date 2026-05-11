@@ -834,6 +834,8 @@ private extension StatusBarMenuManager {
             }
         case .commit:
             "number.square"
+        case .workflowRun:
+            "play.circle"
         }
     }
 
@@ -885,6 +887,8 @@ private extension StatusBarMenuManager {
         case let .commitHash(hash),
              let .repositoryCommitHash(_, hash):
             String(hash.prefix(10))
+        case let .repositoryWorkflowRun(_, runID):
+            "Run \(runID)"
         }
     }
 

@@ -15,10 +15,33 @@ public enum GitHubReferenceLocalContext {
                 .repositoryIssueNumber(repositoryFullName: repositoryFullName, number: number)
             case let .commitHash(hash):
                 .repositoryCommitHash(repositoryFullName: repositoryFullName, hash: hash)
-            case .repositoryIssueNumber, .repositoryCommitHash:
+            case .repositoryIssueNumber, .repositoryCommitHash, .repositoryWorkflowRun:
                 query
             }
         }
+    }
+
+    public static func queries(
+        _ queries: [GitHubReferenceQuery],
+        applyingLocalCommitContextFrom localRepoIndex: LocalRepoIndex
+    ) async -> [GitHubReferenceQuery] {
+        var scopedQueries: [GitHubReferenceQuery] = []
+        scopedQueries.reserveCapacity(queries.count)
+
+        for query in queries {
+            switch query {
+            case let .commitHash(hash):
+                if let repositoryFullName = await self.repositoryFullName(containingCommitHash: hash, localRepoIndex: localRepoIndex) {
+                    scopedQueries.append(.repositoryCommitHash(repositoryFullName: repositoryFullName, hash: hash))
+                } else {
+                    scopedQueries.append(query)
+                }
+            case .issueNumber, .repositoryIssueNumber, .repositoryCommitHash, .repositoryWorkflowRun:
+                scopedQueries.append(query)
+            }
+        }
+
+        return scopedQueries
     }
 
     public static func repositoryFullName(in text: String, localRepoIndex: LocalRepoIndex = .empty) async -> String? {
@@ -51,6 +74,33 @@ public enum GitHubReferenceLocalContext {
             if let fullName = await task.value {
                 await self.repositoryFullNameCache.set(fullName, for: expandedPath)
                 append(fullName)
+            }
+        }
+
+        return fullNames.count == 1 ? fullNames[0] : nil
+    }
+
+    public static func repositoryFullName(containingCommitHash hash: String, localRepoIndex: LocalRepoIndex) async -> String? {
+        let statuses = localRepoIndex.all.filter { $0.fullName != nil }
+        guard statuses.isEmpty == false else { return nil }
+
+        var fullNames: [String] = []
+        var seen: Set<String> = []
+        await withTaskGroup(of: String?.self) { group in
+            for status in statuses {
+                guard let fullName = status.fullName else { continue }
+
+                let path = status.path
+                group.addTask {
+                    self.localCommitExists(hash: hash, at: path) ? fullName : nil
+                }
+            }
+
+            for await fullName in group {
+                guard let fullName else { continue }
+                guard seen.insert(fullName.lowercased()).inserted else { continue }
+
+                fullNames.append(fullName)
             }
         }
 
@@ -128,6 +178,26 @@ public enum GitHubReferenceLocalContext {
 
     private nonisolated static func stripGitSuffix(_ value: String) -> String {
         value.hasSuffix(".git") ? String(value.dropLast(4)) : value
+    }
+
+    private nonisolated static func localCommitExists(hash: String, at path: URL) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["git", "-C", path.path, "cat-file", "-e", "\(hash)^{commit}"]
+        var environment = ProcessInfo.processInfo.environment
+        environment["GIT_TERMINAL_PROMPT"] = "0"
+        environment["GIT_OPTIONAL_LOCKS"] = "0"
+        process.environment = environment
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+        } catch {
+            return false
+        }
+        process.waitUntilExit()
+        return process.terminationStatus == 0
     }
 }
 

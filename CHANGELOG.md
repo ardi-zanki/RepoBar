@@ -2,6 +2,8 @@
 
 ## 0.5.2 - Unreleased
 
+- Resolve bare copied commit hashes like `0213e9d` against local repositories before falling back to broad GitHub lookup.
+- Recognize copied GitHub Actions run URLs like `owner/repo/actions/runs/123` as GitHub references.
 - Move GitHub reference preview actions into an inline browser header with Back, Copy, and Open controls while keeping the preview's persistent GitHub web session.
 - Explain in GitHub API Status that rate limits are shared by the GitHub user or actor across PATs, OAuth/GitHub App user tokens, and `gh` CLI requests.
 - Recognize chained and ranged copied references like `owner/repo#70/#71` and `owner/repo#66-#69` as multiple GitHub references.

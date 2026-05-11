@@ -4,12 +4,14 @@ public enum GitHubReferenceKind: String, Sendable, Hashable {
     case issue
     case pullRequest
     case commit
+    case workflowRun
 
     public var label: String {
         switch self {
         case .issue: "Issue"
         case .pullRequest: "Pull Request"
         case .commit: "Commit"
+        case .workflowRun: "Workflow Run"
         }
     }
 }
@@ -33,6 +35,7 @@ public enum GitHubReferenceQuery: Sendable, Hashable {
     case repositoryIssueNumber(repositoryFullName: String, number: Int)
     case commitHash(String)
     case repositoryCommitHash(repositoryFullName: String, hash: String)
+    case repositoryWorkflowRun(repositoryFullName: String, runID: Int64)
 
     public var displayText: String {
         switch self {
@@ -40,6 +43,7 @@ public enum GitHubReferenceQuery: Sendable, Hashable {
         case let .repositoryIssueNumber(repositoryFullName, number): "\(repositoryFullName)#\(number)"
         case let .commitHash(hash): String(hash.prefix(10))
         case let .repositoryCommitHash(repositoryFullName, hash): "\(repositoryFullName)@\(hash.prefix(10))"
+        case let .repositoryWorkflowRun(repositoryFullName, runID): "\(repositoryFullName) run \(runID)"
         }
     }
 
@@ -48,7 +52,8 @@ public enum GitHubReferenceQuery: Sendable, Hashable {
         case .issueNumber, .commitHash:
             nil
         case let .repositoryIssueNumber(repositoryFullName, _),
-             let .repositoryCommitHash(repositoryFullName, _):
+             let .repositoryCommitHash(repositoryFullName, _),
+             let .repositoryWorkflowRun(repositoryFullName, _):
             repositoryFullName
         }
     }
