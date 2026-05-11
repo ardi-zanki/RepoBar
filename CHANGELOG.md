@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.2 - Unreleased
+## 0.5.2 - 2026-05-11
 
 - Recognize copied repository-name issue references like `discrawl#64` and resolve them against a unique local or accessible GitHub repository.
 - Resolve bare copied commit hashes like `0213e9d` against local repositories before falling back to broad GitHub lookup.
