@@ -17,11 +17,13 @@ final class RefreshScheduler {
 
     func restart(fireImmediately: Bool = true) {
         self.timer?.invalidate()
-        self.timer = Timer.scheduledTimer(withTimeInterval: self.interval, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: self.interval, repeats: true) { [weak self] _ in
             guard let self else { return }
 
             Task { @MainActor in self.tickHandler?() }
         }
+        timer.tolerance = min(max(self.interval * 0.1, 1), 30)
+        self.timer = timer
         if fireImmediately {
             self.timer?.fire()
         }

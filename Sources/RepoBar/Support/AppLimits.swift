@@ -45,8 +45,8 @@ enum AppLimits {
         static let perRepositoryRecentLimit = 4
         static let repositorySearchConcurrencyLimit = 4
         static let minimumSearchCharacters = 2
-        static let webPreviewPreloadLimit = 8
-        static let webPreviewCacheLimit = 12
+        static let webPreviewPreloadLimit = 2
+        static let webPreviewCacheLimit = 4
     }
 
     enum RepoCommits {

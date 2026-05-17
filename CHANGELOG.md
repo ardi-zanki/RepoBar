@@ -2,6 +2,8 @@
 
 ## 0.6.2 - Unreleased
 
+- Reduce idle and Issue Navigator CPU use by coalescing timers, limiting WebKit preview preloads, and tearing down previews when the window closes.
+
 ## 0.6.1 - 2026-05-17
 
 - Recognize copied prose like `PR 123, 456 and 789` as multiple GitHub references.

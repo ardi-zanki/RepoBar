@@ -1,7 +1,6 @@
 import AppKit
 import RepoBarCore
 import SwiftUI
-import WebKit
 
 struct IssueNavigatorView: View {
     private enum Metrics {
@@ -74,9 +73,10 @@ struct IssueNavigatorView: View {
         .onDisappear {
             self.searchGeneration = UUID()
             self.searchTask?.cancel()
+            self.browserStore.clear()
         }
         .onReceive(
-            Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+            Timer.publish(every: 2, tolerance: 0.5, on: .main, in: .common).autoconnect()
         ) { _ in
             self.updateClipboard(seedIfEmpty: false)
         }
@@ -209,9 +209,6 @@ struct IssueNavigatorView: View {
                                 onOpen: { self.open(match) }
                             )
                             .contentShape(Rectangle())
-                            .onAppear {
-                                self.browserStore.preload(match.url)
-                            }
                             .onTapGesture {
                                 self.selectedURL = match.url
                             }
@@ -660,66 +657,6 @@ private struct IssueNavigatorCountBadge: View {
         .padding(.vertical, 5)
         .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
         .overlay(Capsule().strokeBorder(Color.primary.opacity(0.06)))
-    }
-}
-
-@MainActor
-private final class IssueNavigatorBrowserStore: NSObject, WKNavigationDelegate, WKUIDelegate {
-    private var webViews: [URL: WKWebView] = [:]
-    private var accessOrder: [URL] = []
-
-    func preload(_ url: URL) {
-        _ = self.webView(for: url)
-    }
-
-    func preload(_ urls: [URL]) {
-        for url in urls {
-            self.preload(url)
-        }
-    }
-
-    func webView(for url: URL) -> WKWebView {
-        if let webView = self.webViews[url] {
-            self.markAccessed(url)
-            return webView
-        }
-
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
-
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.allowsBackForwardNavigationGestures = true
-        webView.navigationDelegate = self
-        webView.uiDelegate = self
-        webView.load(URLRequest(url: url))
-
-        self.webViews[url] = webView
-        self.markAccessed(url)
-        self.trimCache()
-        return webView
-    }
-
-    func webView(_ webView: WKWebView, didFinish _: WKNavigation) {
-        let script = "if (window.scrollY < 80) window.scrollTo(0, 170);"
-        webView.evaluateJavaScript(script)
-    }
-
-    private func markAccessed(_ url: URL) {
-        self.accessOrder.removeAll { $0 == url }
-        self.accessOrder.append(url)
-    }
-
-    private func trimCache() {
-        while self.webViews.count > AppLimits.IssueNavigator.webPreviewCacheLimit {
-            guard let evictedURL = self.accessOrder.first else { break }
-
-            self.accessOrder.removeFirst()
-            guard let webView = self.webViews.removeValue(forKey: evictedURL) else { continue }
-
-            webView.stopLoading()
-            webView.removeFromSuperview()
-        }
     }
 }
 

@@ -64,6 +64,7 @@ final class IssueNavigatorWindowController: NSObject, NSWindowDelegate {
             guard self.presentationID == closingPresentationID else { return }
             guard !closingWindow.isVisible else { return }
 
+            closingWindow.contentViewController = nil
             closingWindow.orderOut(nil)
             self.window = nil
             self.hideDockIcon()
