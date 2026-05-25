@@ -26,6 +26,7 @@ struct IssueNavigatorView: View {
     @State private var clipboardText: String?
     @State private var clipboardQueries: [GitHubReferenceQuery] = []
     @State private var browserStore = IssueNavigatorBrowserStore()
+    @State private var browserNavigationVersion = 0
 
     private var repositories: [Repository] {
         self.appState.gitHubReferenceRepositories()
@@ -63,6 +64,9 @@ struct IssueNavigatorView: View {
         .background(.ultraThinMaterial)
         .frame(minWidth: 980, minHeight: 620)
         .onAppear {
+            self.browserStore.onNavigationStateChange = {
+                self.browserNavigationVersion &+= 1
+            }
             self.updateClipboard(seedIfEmpty: true)
             if self.results.isEmpty {
                 self.scheduleSearch(immediate: true)
@@ -73,6 +77,7 @@ struct IssueNavigatorView: View {
         .onDisappear {
             self.searchGeneration = UUID()
             self.searchTask?.cancel()
+            self.browserStore.onNavigationStateChange = nil
             self.browserStore.clear()
         }
         .onReceive(
@@ -210,7 +215,7 @@ struct IssueNavigatorView: View {
                             )
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                self.selectedURL = match.url
+                                self.select(match)
                             }
                             .contextMenu {
                                 Button("Open in Browser") { self.open(match) }
@@ -281,7 +286,20 @@ struct IssueNavigatorView: View {
     }
 
     private func previewHeader(for match: GitHubReferenceMatch) -> some View {
-        HStack(spacing: 12) {
+        let canGoBack = self.browserStore.canGoBack(match.url)
+
+        return HStack(spacing: 12) {
+            Button {
+                self.browserStore.goBack(match.url)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.borderless)
+            .disabled(!canGoBack)
+            .help("Back")
+
             ZStack {
                 Circle()
                     .fill(self.tint(for: match).opacity(0.16))
@@ -309,6 +327,7 @@ struct IssueNavigatorView: View {
             }
             Spacer()
         }
+        .id(self.browserNavigationVersion)
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
         .background(.bar)
@@ -498,6 +517,13 @@ struct IssueNavigatorView: View {
                 if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
                 return ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
             }
+    }
+
+    private func select(_ match: GitHubReferenceMatch) {
+        if self.selectedURL == match.url {
+            self.browserStore.reloadInitialURL(match.url)
+        }
+        self.selectedURL = match.url
     }
 
     private func status(

@@ -6,6 +6,7 @@ import WebKit
 final class IssueNavigatorBrowserStore: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var webViews: [URL: WKWebView] = [:]
     private var accessOrder: [URL] = []
+    var onNavigationStateChange: (() -> Void)?
 
     func preload(_ url: URL) {
         _ = self.webView(for: url)
@@ -26,6 +27,25 @@ final class IssueNavigatorBrowserStore: NSObject, WKNavigationDelegate, WKUIDele
         }
         self.webViews.removeAll()
         self.accessOrder.removeAll()
+    }
+
+    func canGoBack(_ url: URL) -> Bool {
+        self.webViews[url]?.canGoBack == true
+    }
+
+    func goBack(_ url: URL) {
+        guard let webView = self.webViews[url], webView.canGoBack else { return }
+
+        webView.goBack()
+        self.onNavigationStateChange?()
+    }
+
+    func reloadInitialURL(_ url: URL) {
+        let webView = self.webView(for: url)
+        guard webView.url != url else { return }
+
+        webView.load(URLRequest(url: url))
+        self.onNavigationStateChange?()
     }
 
     func webView(for url: URL) -> WKWebView {
@@ -53,6 +73,11 @@ final class IssueNavigatorBrowserStore: NSObject, WKNavigationDelegate, WKUIDele
     func webView(_ webView: WKWebView, didFinish _: WKNavigation) {
         let script = "if (window.scrollY < 80) window.scrollTo(0, 170);"
         webView.evaluateJavaScript(script)
+        self.onNavigationStateChange?()
+    }
+
+    func webView(_: WKWebView, didCommit _: WKNavigation) {
+        self.onNavigationStateChange?()
     }
 
     private func markAccessed(_ url: URL) {
