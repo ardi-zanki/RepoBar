@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.6.7 - Unreleased
+
 ## 0.6.6 - 2026-05-26
 
 - Open multi-reference GitHub detections in Issue Navigator on left click while keeping the preview menu on right click.
