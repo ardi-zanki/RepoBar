@@ -44,7 +44,7 @@ public enum GitHubReferenceTranslator {
             in: scannedText,
             minimumBareDigits: minimumBareDigits
         )
-        if repositoryHeadingListBlockParse.entries.isEmpty == false {
+        if repositoryHeadingListBlockParse.consumedLineIndexes.isEmpty == false {
             return self.queriesMergingRepositoryHeadingListBlocks(
                 in: scannedText,
                 minimumBareDigits: minimumBareDigits,
@@ -231,10 +231,18 @@ public enum GitHubReferenceTranslator {
     private static func bareIssueSeriesQueries(in tokens: [String], minimumBareDigits: Int) -> [GitHubReferenceQuery] {
         var queries: [GitHubReferenceQuery] = []
 
-        for token in tokens {
+        for index in tokens.indices {
+            let token = tokens[index]
             let normalized = token.lowercased()
             if let number = self.bareIssueSeriesNumber(from: token, minimumBareDigits: minimumBareDigits) {
+                let startsDiffStat = token.hasPrefix("#") == false && self.startsDiffStat(in: tokens, at: index)
+                if startsDiffStat, queries.isEmpty == false {
+                    break
+                }
                 queries.append(.issueNumber(number))
+                if startsDiffStat {
+                    break
+                }
                 continue
             }
 
@@ -246,6 +254,64 @@ public enum GitHubReferenceTranslator {
         }
 
         return queries
+    }
+
+    private static func startsDiffStat(in tokens: [String], at index: Array<String>.Index) -> Bool {
+        let nounIndex = index + 1
+        guard tokens.indices.contains(nounIndex),
+              self.isDiffStatNoun(tokens[nounIndex].lowercased())
+        else { return false }
+
+        let nextIndex = nounIndex + 1
+        let noun = tokens[nounIndex].lowercased()
+        guard tokens.indices.contains(nextIndex) else {
+            return self.isStrongDiffStatNoun(noun)
+        }
+
+        let nextToken = tokens[nextIndex].lowercased()
+        if nextToken == "/" {
+            let countIndex = nextIndex + 1
+            return tokens.indices.contains(countIndex) && Int(tokens[countIndex]) != nil
+        }
+        if nextToken == "changed" {
+            return self.isStrongDiffStatNoun(noun)
+        }
+        if ["and", "or"].contains(nextToken) {
+            let countIndex = nextIndex + 1
+            return self.isStrongDiffStatNoun(noun) &&
+                tokens.indices.contains(countIndex) &&
+                Int(tokens[countIndex]) != nil
+        }
+
+        return Int(nextToken) != nil && self.isStrongDiffStatNoun(noun)
+    }
+
+    private static func isDiffStatNoun(_ token: String) -> Bool {
+        [
+            "add",
+            "adds",
+            "addition",
+            "additions",
+            "del",
+            "dels",
+            "delete",
+            "deletes",
+            "deletion",
+            "deletions",
+            "file",
+            "files"
+        ].contains(token)
+    }
+
+    private static func isStrongDiffStatNoun(_ token: String) -> Bool {
+        [
+            "addition",
+            "additions",
+            "deletion",
+            "deletions",
+            "file",
+            "files"
+        ].contains(token)
     }
 
     private static func bareIssueSeriesNumber(from token: String, minimumBareDigits: Int) -> Int? {
@@ -674,7 +740,7 @@ extension GitHubReferenceTranslator {
         }
     }
 
-    private static func repositoryContext(in text: String) -> String? {
+    static func repositoryContext(in text: String) -> String? {
         var repositoryFullNames: [String] = []
         var seen: Set<String> = []
 
@@ -730,7 +796,7 @@ extension GitHubReferenceTranslator {
         ) != nil
     }
 
-    private static func listItemRepositoryContext(in text: String) -> String? {
+    static func listItemRepositoryContext(in text: String) -> String? {
         let repositories = text
             .split(whereSeparator: \.isNewline)
             .compactMap { self.listItemBody(in: String($0)) }
