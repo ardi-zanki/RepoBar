@@ -22,7 +22,9 @@ struct AccountSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Account") {
+            AccountsListSection(session: self.session, appState: self.appState)
+
+            Section("Add Account") {
                 Picker("Host", selection: self.$hostMode) {
                     ForEach(HostMode.allCases, id: \.self) { mode in
                         Text(mode.label).tag(mode)
@@ -31,7 +33,7 @@ struct AccountSettingsView: View {
                 .pickerStyle(.segmented)
 
                 switch self.session.account {
-                case let .loggedIn(user):
+                case let .loggedIn(user) where self.session.settings.accounts.isEmpty:
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .top, spacing: 12) {
                             HStack(spacing: 10) {
@@ -378,7 +380,6 @@ struct AccountSettingsView: View {
 
             if self.hostMode == .enterprise, let enterpriseURL {
                 self.session.settings.enterpriseHost = enterpriseURL
-                await self.appState.github.setAPIHost(enterpriseURL.appending(path: "/api/v3"))
                 self.session.settings.githubHost = enterpriseURL
                 self.validationError = nil
             } else {
@@ -387,7 +388,6 @@ struct AccountSettingsView: View {
                     self.session.account = .loggedOut
                     return
                 }
-                await self.appState.github.setAPIHost(URL(string: "https://api.github.com")!)
                 self.session.settings.githubHost = URL(string: "https://github.com")!
                 self.session.settings.enterpriseHost = nil
                 self.validationError = nil
@@ -415,9 +415,15 @@ struct AccountSettingsView: View {
                 self.session.settings.authMethod = .oauth
                 self.appState.persistSettings()
                 self.session.hasStoredTokens = true
-                if let user = try? await appState.github.currentUser() {
+                let loginHost = self.session.settings.enterpriseHost ?? self.session.settings.githubHost
+                if let user = await self.appState.currentUserFromLegacyCredentials(host: loginHost) {
                     self.session.account = .loggedIn(user)
                     self.session.lastError = nil
+                    await self.appState.recordAccountForLogin(
+                        user: user,
+                        host: loginHost,
+                        method: .oauth
+                    )
                 } else {
                     self.session.account = .loggedIn(UserIdentity(username: "", host: self.session.settings.githubHost))
                 }

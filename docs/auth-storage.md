@@ -63,3 +63,35 @@ The file backend exists for local debug autonomy, not for shipped secrets. It st
 - `pat`: Personal Access Token.
 
 Files are written with `0600` permissions where supported. `TokenStore.clear()` removes the file-backed OAuth, client, and PAT entries for the configured service.
+
+## Account-Scoped Keys (Phase 1)
+
+In addition to the legacy fixed keys above, `TokenStore` accepts account-scoped APIs that key each item by `accountID`:
+
+- `<accountID>:default` — OAuth access/refresh tokens for the account.
+- `<accountID>:client` — OAuth client credentials for the account.
+- `<accountID>:pat` — Personal Access Token for the account.
+
+Public APIs:
+
+- `save(tokens:accountID:)`, `loadTokens(accountID:)`
+- `save(clientCredentials:accountID:)`, `loadClientCredentials(accountID:)`
+- `savePAT(_:accountID:)`, `loadPAT(accountID:)`
+- `clear(accountID:)` removes all three kinds for one account.
+- `allAccountIDs()` returns the union of account IDs found in file storage and (best effort) Keychain.
+
+Storage representation:
+
+- **Keychain**: `kSecAttrAccount` is set to `"<accountID>:<kind>"`. `allAccountIDs()` enumerates entries for the configured service (across access groups) and parses out the account ID prefix, ignoring legacy fixed accounts.
+- **File**: files are still named `<service>-<account>.json`. The colon separator is sanitized to a dash, so on disk you will see `…-<accountID>-default.json`, `…-<accountID>-client.json`, and `…-<accountID>-pat.json`. Because the on-disk name is sanitized (e.g., `#` → `-`), the filename is not a reliable source of the original account ID. To preserve the original string, file storage also maintains a small JSON index at `<service>-accounts-index.json` next to the token files. Each account-scoped `save…(accountID:)` call records the original `accountID` in this index, and `clear(accountID:)` removes it. `allAccountIDs()` returns the union of indexed IDs and any IDs scanned from filenames (the latter only as a fallback for entries that pre-date the index), sorted and deduplicated. Legacy non-account wrappers (`save(tokens:)`, `savePAT(_:)`, etc.) never write to the index.
+
+The legacy `save(tokens:)`, `load()`, `save(clientCredentials:)`, `loadClientCredentials()`, `savePAT(_:)`, `loadPAT()`, `clear()`, and `clearPAT()` APIs are preserved as wrappers over the fixed `default` / `client` / `pat` keys for backwards compatibility during the multi-account transition.
+
+## Multi-Account Wiring
+
+Phase 2+ wires the account-scoped keys to the rest of the app:
+
+- `AccountManager` (`Sources/RepoBar/Auth/AccountManager.swift`) owns one `GitHubClient` per `Account` and runs an `AccountScopedOAuthRefresher` that reads and writes tokens via `loadTokens(accountID:)` / `save(tokens:accountID:)`.
+- On launch, `AppState.bootstrapAccounts()` calls `migrateLegacyAccountIfNeeded()` which probes `GET /user` with whichever credential currently lives under the legacy fixed keys, derives a stable `Account` (`<host>#<username>`), and copies the existing OAuth tokens / client credentials / PAT under the new account-scoped keys. The legacy entries are left in place so that downgrading to a previous build still finds them.
+- After successful `repobar login` or `repobar import-gh-token`, both commands probe `GET /user`, derive an `Account`, persist tokens under `<accountID>:default` / `<accountID>:client` / `<accountID>:pat`, and append the account to `UserSettings.accounts`. The legacy fast-path entries are also written so that callers that still read `TokenStore.shared.load()` keep working.
+- `HTTPResponseDiskCache.databaseURL(accountID:)` and `RepoBarPersistentCache.databaseURL(accountID:)` resolve to `~/Library/Application Support/RepoBar/Cache/<safe-account-id>.sqlite`, so each `GitHubClient` writes responses to its own SQLite database. Passing `accountID: nil` returns the legacy shared path.

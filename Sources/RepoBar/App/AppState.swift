@@ -11,7 +11,9 @@ final class AppState {
     var session = Session()
     let auth = OAuthCoordinator()
     let patAuth = PATAuthenticator()
-    let github = GitHubClient()
+    let legacyGitHub: GitHubClient
+    var github: GitHubClient
+    let accountManager = AccountManager()
     let refreshScheduler = RefreshScheduler()
     let settingsStore = SettingsStore()
     let gitHubPullRequestNotificationRunner = GitHubPullRequestNotificationRunner()
@@ -38,6 +40,9 @@ final class AppState {
     let defaultAPIHost = RepoBarAuthDefaults.apiHost
 
     init() {
+        let legacyGitHub = GitHubClient()
+        self.legacyGitHub = legacyGitHub
+        self.github = legacyGitHub
         self.session.settings = self.settingsStore.load()
         self.reloadRateLimitCacheSummary()
         RepoBarLogging.bootstrapIfNeeded()
@@ -59,6 +64,14 @@ final class AppState {
             await self.github.setTokenProvider { @Sendable [weak self] () async throws -> OAuthTokens? in
                 guard let self else { return nil }
 
+                let accountID = await MainActor.run { self.session.settings.resolvedActiveAccount()?.id }
+                if let accountID {
+                    if let token = try? await self.accountManager.currentAccessToken(accountID: accountID) {
+                        return OAuthTokens(accessToken: token, refreshToken: "", expiresAt: nil)
+                    }
+                    return nil
+                }
+
                 let authMethod = await MainActor.run { self.session.settings.authMethod }
                 if authMethod == .pat {
                     if let pat = try? tokenStore.loadPAT() {
@@ -75,11 +88,21 @@ final class AppState {
                 if self.session.settings.authMethod == .oauth, self.auth.loadTokens() != nil {
                     _ = try? await self.auth.refreshIfNeeded()
                 }
+                // Fan out to every account-scoped OAuth refresher. PAT-only
+                // accounts are no-ops and OAuth accounts refresh independently.
+                await self.accountManager.refreshAllIfNeeded()
                 try? await Task.sleep(for: .seconds(self.tokenRefreshInterval))
             }
         }
-        self.refreshScheduler.configure(interval: self.session.settings.refreshInterval.seconds) { [weak self] in
-            self?.requestRefresh()
+        // Bootstrap account manager before the first scheduled refresh so
+        // account-scoped credentials are available to the token provider.
+        Task { [weak self] in
+            guard let self else { return }
+
+            await self.bootstrapAccounts()
+            self.refreshScheduler.configure(interval: self.session.settings.refreshInterval.seconds) { [weak self] in
+                self?.requestRefresh()
+            }
         }
         Task { await DiagnosticsLogger.shared.setEnabled(self.session.settings.diagnosticsEnabled) }
         Task { [weak self] in

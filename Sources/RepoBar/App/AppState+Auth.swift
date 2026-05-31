@@ -6,7 +6,6 @@ extension AppState {
     func quickLogin() async {
         self.session.account = .loggingIn
         self.session.settings.loopbackPort = self.defaultLoopbackPort
-        await self.github.setAPIHost(self.defaultAPIHost)
         self.session.settings.githubHost = self.defaultGitHubHost
         self.session.settings.enterpriseHost = nil
         self.session.settings.authMethod = .oauth
@@ -20,9 +19,10 @@ extension AppState {
                 loopbackPort: self.defaultLoopbackPort
             )
             self.session.hasStoredTokens = true
-            if let user = try? await self.github.currentUser() {
+            if let user = await self.currentUserFromLegacyCredentials(host: self.defaultGitHubHost) {
                 self.session.account = .loggedIn(user)
                 self.session.lastError = nil
+                await self.recordAccountForLogin(user: user, host: self.defaultGitHubHost, method: .oauth)
             } else {
                 self.session.account = .loggedIn(UserIdentity(username: "", host: self.defaultGitHubHost))
             }
@@ -37,10 +37,6 @@ extension AppState {
     func loginWithPAT(_ pat: String, host: URL) async {
         self.session.account = .loggingIn
         self.session.lastError = nil
-        let apiHost = host.host == "github.com"
-            ? URL(string: "https://api.github.com")!
-            : host.appendingPathComponent("api/v3")
-        await self.github.setAPIHost(apiHost)
         self.session.settings.githubHost = host
         if host.host?.lowercased() == "github.com" {
             self.session.settings.enterpriseHost = nil
@@ -55,6 +51,7 @@ extension AppState {
             self.session.account = .loggedIn(user)
             self.session.lastError = nil
             self.persistSettings()
+            await self.recordAccountForLogin(user: user, host: host, method: .pat, persistPAT: pat)
             await self.refresh()
         } catch {
             self.session.account = .loggedOut
@@ -66,6 +63,15 @@ extension AppState {
 
     /// Logs out the current user, clearing tokens based on the current auth method.
     func logoutCurrentMethod() async {
+        if let accountID = self.session.settings.resolvedActiveAccount()?.id {
+            await self.removeAccount(accountID)
+            if self.session.settings.accounts.isEmpty {
+                self.session.account = .loggedOut
+                self.session.hasStoredTokens = false
+            }
+            return
+        }
+
         await self.auth.logout()
         await self.patAuth.logout()
         self.session.account = .loggedOut

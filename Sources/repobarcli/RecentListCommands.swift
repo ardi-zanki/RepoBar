@@ -36,7 +36,7 @@ struct ReleasesCommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoReleasesOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: releases.count,
                 releases: releases.map(ReleaseOutput.init)
             )
@@ -87,7 +87,7 @@ struct CICommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoWorkflowRunsOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: runs.count,
                 runs: runs.map(WorkflowRunOutput.init)
             )
@@ -138,7 +138,7 @@ struct DiscussionsCommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoDiscussionsOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: discussions.count,
                 discussions: discussions.map(DiscussionOutput.init)
             )
@@ -189,7 +189,7 @@ struct TagsCommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoTagsOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: tags.count,
                 tags: tags.map(TagOutput.init)
             )
@@ -240,7 +240,7 @@ struct BranchesCommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoBranchesOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: branches.count,
                 branches: branches.map(BranchOutput.init)
             )
@@ -291,7 +291,7 @@ struct ContributorsCommand: CommanderRunnableCommand {
 
         if self.output.jsonOutput {
             let output = RepoContributorsOutput(
-                repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                repo: repo.webURL(baseHost: context.host),
                 count: contributors.count,
                 contributors: contributors.map(ContributorOutput.init)
             )
@@ -351,7 +351,7 @@ struct CommitsCommand: CommanderRunnableCommand {
 
             if self.output.jsonOutput {
                 let output = RepoCommitsOutput(
-                    repo: repo.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                    repo: repo.webURL(baseHost: context.host),
                     count: commits.items.count,
                     totalCount: commits.totalCount,
                     commits: commits.items.map(CommitOutput.init)
@@ -448,7 +448,7 @@ struct ActivityCommand: CommanderRunnableCommand {
 
             if self.output.jsonOutput {
                 let output = RepoActivityOutput(
-                    repo: repoID.webURL(baseHost: context.settings.enterpriseHost ?? context.settings.githubHost),
+                    repo: repoID.webURL(baseHost: context.host),
                     count: events.count,
                     events: events
                 )
@@ -500,7 +500,7 @@ struct ActivityCommand: CommanderRunnableCommand {
         if self.output.plain == false, self.output.useColor {
             print("Activity: \(login)")
         }
-        let host = context.settings.enterpriseHost ?? context.settings.githubHost
+        let host = context.host
         for line in globalActivityTableLines(
             events,
             useColor: self.output.useColor,

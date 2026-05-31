@@ -22,11 +22,32 @@ struct RepoIdentifier: Equatable {
 }
 
 func makeAuthenticatedClient() async throws -> AuthContext {
+    let settings = SettingsStore().load()
+    if let account = settings.resolvedActiveAccount() {
+        guard (try? TokenStore.shared.loadTokens(accountID: account.id)) != nil
+            || (try? TokenStore.shared.loadPAT(accountID: account.id)) != nil
+        else {
+            throw CLIError.notAuthenticated
+        }
+
+        let client = GitHubClient(accountID: account.id)
+        await client.setAPIHost(account.apiHost)
+        await client.setTokenProvider { @Sendable () async throws -> OAuthTokens? in
+            if account.authMethod == .pat, let pat = try? TokenStore.shared.loadPAT(accountID: account.id) {
+                return OAuthTokens(accessToken: pat, refreshToken: "", expiresAt: nil)
+            }
+            return try await OAuthTokenRefresher().refreshIfNeeded(
+                host: account.host,
+                accountID: account.id
+            )
+        }
+        return AuthContext(client: client, settings: settings, host: account.host)
+    }
+
     guard (try? TokenStore.shared.load()) != nil else {
         throw CLIError.notAuthenticated
     }
 
-    let settings = SettingsStore().load()
     let host = settings.enterpriseHost ?? settings.githubHost
     let apiHost: URL = if let enterprise = settings.enterpriseHost {
         enterprise.appending(path: "/api/v3")
@@ -40,6 +61,32 @@ func makeAuthenticatedClient() async throws -> AuthContext {
         try await OAuthTokenRefresher().refreshIfNeeded(host: host)
     }
     return AuthContext(client: client, settings: settings, host: host)
+}
+
+func mirrorAccountCredentialsToLegacy(_ account: Account) throws {
+    if TokenStore.shared.mirrorAccountCredentialsToLegacy(accountID: account.id, authMethod: account.authMethod) == false {
+        throw CLIError.notAuthenticated
+    }
+}
+
+func mirrorActiveAccountIntoSettings(_ account: Account, settings: inout UserSettings) {
+    settings.githubHost = account.host
+    settings.enterpriseHost = account.host.host?.lowercased() == "github.com" ? nil : account.host
+    settings.authMethod = account.authMethod
+    settings.loopbackPort = account.loopbackPort
+}
+
+func mirrorResolvedActiveAccount(settings: inout UserSettings) {
+    guard let active = settings.resolvedActiveAccount() else {
+        TokenStore.shared.clear()
+        return
+    }
+
+    mirrorActiveAccountIntoSettings(active, settings: &settings)
+    _ = TokenStore.shared.mirrorAccountCredentialsToLegacy(
+        accountID: active.id,
+        authMethod: active.authMethod
+    )
 }
 
 func makeRepoURL(baseHost: URL, owner: String, name: String) -> URL {

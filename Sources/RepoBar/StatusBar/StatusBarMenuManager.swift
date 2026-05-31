@@ -18,7 +18,7 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
     private var gitHubReferenceMenu: NSMenu?
     private lazy var menuBuilder = StatusBarMenuBuilder(appState: self.appState, target: self)
     private let menuItemFactory = MenuItemViewFactory()
-    lazy var recentMenuService = RecentMenuService(github: self.appState.github)
+    lazy var recentMenuService = RecentMenuService(appState: self.appState)
     private lazy var recentListCoordinator = RecentListMenuCoordinator(
         appState: self.appState,
         menuBuilder: self.menuBuilder,

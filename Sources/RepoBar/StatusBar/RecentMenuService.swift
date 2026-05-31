@@ -8,7 +8,8 @@ final class RecentMenuService {
     let cacheTTL: TimeInterval
     let loadTimeout: TimeInterval
 
-    private let github: GitHubClient
+    private let github: @MainActor () -> GitHubClient
+    private let cacheNamespace: @MainActor () -> String
     private let recentIssuesCache = RecentListCache<RepoIssueSummary>()
     private let recentPullRequestsCache = RecentListCache<RepoPullRequestSummary>()
     private let recentReleasesCache = RecentListCache<RepoReleaseSummary>()
@@ -21,17 +22,34 @@ final class RecentMenuService {
     private var recentCommitCounts: [String: Int] = [:]
 
     init(
-        github: GitHubClient,
+        github: @escaping @MainActor () -> GitHubClient,
+        cacheNamespace: @escaping @MainActor () -> String,
         listLimit: Int = AppLimits.RecentLists.limit,
         previewLimit: Int = AppLimits.RecentLists.previewLimit,
         cacheTTL: TimeInterval = AppLimits.RecentLists.cacheTTL,
         loadTimeout: TimeInterval = AppLimits.RecentLists.loadTimeout
     ) {
         self.github = github
+        self.cacheNamespace = cacheNamespace
         self.listLimit = listLimit
         self.previewLimit = previewLimit
         self.cacheTTL = cacheTTL
         self.loadTimeout = loadTimeout
+    }
+
+    convenience init(appState: AppState) {
+        self.init(
+            github: { [appState] in appState.github },
+            cacheNamespace: { [appState] in appState.session.settings.resolvedActiveAccount()?.id ?? "legacy" }
+        )
+    }
+
+    func cacheKey(fullName: String) -> String {
+        "\(self.cacheNamespace())|\(fullName)"
+    }
+
+    func cacheContext(fullName: String) -> (key: String, github: GitHubClient) {
+        (self.cacheKey(fullName: fullName), self.github())
     }
 
     func descriptor(for kind: RepoRecentMenuKind) -> RecentMenuDescriptor? {
@@ -169,13 +187,15 @@ final class RecentMenuService {
     }
 
     func cachedRecentCommitCount(fullName: String) -> Int? {
-        if let total = self.recentCommitCounts[fullName] { return total }
-        return self.recentCommitsCache.stale(for: fullName)?.count
+        let key = self.cacheKey(fullName: fullName)
+        if let total = self.recentCommitCounts[key] { return total }
+        return self.recentCommitsCache.stale(for: key)?.count
     }
 
     func cachedCommits(fullName: String, now: Date = Date()) -> [RepoCommitSummary]? {
-        self.recentCommitsCache.cached(for: fullName, now: now, maxAge: self.cacheTTL)
-            ?? self.recentCommitsCache.stale(for: fullName)
+        let key = self.cacheKey(fullName: fullName)
+        return self.recentCommitsCache.cached(for: key, now: now, maxAge: self.cacheTTL)
+            ?? self.recentCommitsCache.stale(for: key)
     }
 
     func cachedCommitDigest(fullName: String) -> Int? {
@@ -205,9 +225,9 @@ final class RecentMenuService {
             needsRefresh: { key, now, ttl in
                 self.recentCommitsCache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
-            load: { key, owner, name, limit in
+            load: { key, owner, name, limit, github in
                 let task = self.recentCommitsCache.task(for: key) {
-                    let list = try await self.github.recentCommits(owner: owner, name: name, limit: limit)
+                    let list = try await github.recentCommits(owner: owner, name: name, limit: limit)
                     await MainActor.run {
                         self.recentCommitCounts[key] = list.totalCount ?? list.items.count
                     }
@@ -243,9 +263,9 @@ final class RecentMenuService {
             needsRefresh: { key, now, ttl in
                 config.cache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
-            load: { key, owner, name, limit in
+            load: { key, owner, name, limit, github in
                 let task = config.cache.task(for: key) {
-                    try await fetch(self.github, owner, name, limit)
+                    try await fetch(github, owner, name, limit)
                 }
                 defer { config.cache.clearInflight(for: key) }
                 let items = try await AsyncTimeout.value(within: self.loadTimeout, task: task)
@@ -275,7 +295,7 @@ struct RecentMenuDescriptor {
     let cached: (String, Date, TimeInterval) -> RecentMenuItems?
     let stale: (String) -> RecentMenuItems?
     let needsRefresh: (String, Date, TimeInterval) -> Bool
-    let load: @MainActor (String, String, String, Int) async throws -> RecentMenuItems
+    let load: @MainActor (String, String, String, Int, GitHubClient) async throws -> RecentMenuItems
 }
 
 enum RecentMenuItems {
