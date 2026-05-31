@@ -64,14 +64,8 @@ func makeAuthenticatedClient() async throws -> AuthContext {
 }
 
 func mirrorAccountCredentialsToLegacy(_ account: Account) throws {
-    if let tokens = try TokenStore.shared.loadTokens(accountID: account.id) {
-        try TokenStore.shared.save(tokens: tokens)
-    }
-    if let credentials = try TokenStore.shared.loadClientCredentials(accountID: account.id) {
-        try TokenStore.shared.save(clientCredentials: credentials)
-    }
-    if let pat = try TokenStore.shared.loadPAT(accountID: account.id) {
-        try TokenStore.shared.savePAT(pat)
+    if TokenStore.shared.mirrorAccountCredentialsToLegacy(accountID: account.id, authMethod: account.authMethod) == false {
+        throw CLIError.notAuthenticated
     }
 }
 
@@ -80,6 +74,19 @@ func mirrorActiveAccountIntoSettings(_ account: Account, settings: inout UserSet
     settings.enterpriseHost = account.host.host?.lowercased() == "github.com" ? nil : account.host
     settings.authMethod = account.authMethod
     settings.loopbackPort = account.loopbackPort
+}
+
+func mirrorResolvedActiveAccount(settings: inout UserSettings) {
+    guard let active = settings.resolvedActiveAccount() else {
+        TokenStore.shared.clear()
+        return
+    }
+
+    mirrorActiveAccountIntoSettings(active, settings: &settings)
+    _ = TokenStore.shared.mirrorAccountCredentialsToLegacy(
+        accountID: active.id,
+        authMethod: active.authMethod
+    )
 }
 
 func makeRepoURL(baseHost: URL, owner: String, name: String) -> URL {

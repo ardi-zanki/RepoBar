@@ -8,7 +8,7 @@ final class RecentMenuService {
     let cacheTTL: TimeInterval
     let loadTimeout: TimeInterval
 
-    private let github: GitHubClient
+    private let github: @MainActor () -> GitHubClient
     private let recentIssuesCache = RecentListCache<RepoIssueSummary>()
     private let recentPullRequestsCache = RecentListCache<RepoPullRequestSummary>()
     private let recentReleasesCache = RecentListCache<RepoReleaseSummary>()
@@ -21,7 +21,7 @@ final class RecentMenuService {
     private var recentCommitCounts: [String: Int] = [:]
 
     init(
-        github: GitHubClient,
+        github: @escaping @MainActor () -> GitHubClient,
         listLimit: Int = AppLimits.RecentLists.limit,
         previewLimit: Int = AppLimits.RecentLists.previewLimit,
         cacheTTL: TimeInterval = AppLimits.RecentLists.cacheTTL,
@@ -207,7 +207,8 @@ final class RecentMenuService {
             },
             load: { key, owner, name, limit in
                 let task = self.recentCommitsCache.task(for: key) {
-                    let list = try await self.github.recentCommits(owner: owner, name: name, limit: limit)
+                    let github = await self.github()
+                    let list = try await github.recentCommits(owner: owner, name: name, limit: limit)
                     await MainActor.run {
                         self.recentCommitCounts[key] = list.totalCount ?? list.items.count
                     }
@@ -245,7 +246,8 @@ final class RecentMenuService {
             },
             load: { key, owner, name, limit in
                 let task = config.cache.task(for: key) {
-                    try await fetch(self.github, owner, name, limit)
+                    let github = await self.github()
+                    return try await fetch(github, owner, name, limit)
                 }
                 defer { config.cache.clearInflight(for: key) }
                 let items = try await AsyncTimeout.value(within: self.loadTimeout, task: task)

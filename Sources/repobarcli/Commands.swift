@@ -511,17 +511,12 @@ struct LogoutCommand: CommanderRunnableCommand {
         }
 
         let resolved = try AccountResolver.resolve(self.account, settings: settings)
-        let removesLegacyBackedAccount = settings.activeAccountID == resolved.id
-            || settings.accounts.count <= 1
         TokenStore.shared.clear(accountID: resolved.id)
-        if removesLegacyBackedAccount {
-            TokenStore.shared.clear()
-            TokenStore.shared.clearPAT()
-        }
         settings.accounts.removeAll(where: { $0.id == resolved.id })
         if settings.activeAccountID == resolved.id {
             settings.activeAccountID = settings.accounts.first?.id
         }
+        mirrorResolvedActiveAccount(settings: &settings)
         store.save(settings)
         print("Logged out of \(resolved.id).")
     }
