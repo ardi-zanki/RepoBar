@@ -173,6 +173,7 @@ extension AppState {
         self.session.settings.activeAccountID = accountID
         self.persistSettings()
         await self.syncPrimaryGitHubClientToActiveAccount()
+        await self.refreshSessionIdentityFromActiveClient()
         // Trigger a refresh so the menu reflects the new active account.
         self.requestRefresh(cancelInFlight: true)
     }
@@ -193,6 +194,7 @@ extension AppState {
             TokenStore.shared.clearPAT()
         }
         await self.syncPrimaryGitHubClientToActiveAccount()
+        await self.refreshSessionIdentityFromActiveClient()
         // Drop any per-account pinned/hidden lists for the removed account.
         var lists = self.session.settings.accountRepoLists
         lists.pinnedByAccount.removeValue(forKey: accountID)
@@ -212,5 +214,15 @@ extension AppState {
         }
         self.github = self.legacyGitHub
         await self.github.setAPIHost(self.defaultAPIHost)
+    }
+
+    private func refreshSessionIdentityFromActiveClient() async {
+        if self.session.settings.resolvedActiveAccount() == nil {
+            self.session.account = .loggedOut
+            return
+        }
+        if let user = try? await self.github.currentUser() {
+            self.session.account = .loggedIn(user)
+        }
     }
 }

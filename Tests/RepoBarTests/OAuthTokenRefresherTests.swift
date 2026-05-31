@@ -42,6 +42,42 @@ struct OAuthTokenRefresherTests {
     }
 
     @Test
+    func `refresh updates account scoped tokens`() async throws {
+        let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
+        let accountID = "github.com#alice"
+        let store = TokenStore(service: service)
+        defer { store.clear(accountID: accountID) }
+
+        try store.save(tokens: OAuthTokens(accessToken: "old", refreshToken: "r1", expiresAt: .distantPast), accountID: accountID)
+        try store.save(clientCredentials: OAuthClientCredentials(clientID: "cid", clientSecret: "csecret"), accountID: accountID)
+
+        let session = URLSession(configuration: Self.sessionConfiguration())
+        let handlerID = UUID().uuidString
+        Self.MockURLProtocol.register(handlerID: handlerID) { request in
+            let body = try #require(Self.bodyString(from: request))
+            #expect(body.contains("client_id=cid"))
+            #expect(body.contains("refresh_token=r1"))
+
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = Data("""
+            {"access_token":"new","token_type":"bearer","scope":"repo","expires_in":3600,"refresh_token":"r2"}
+            """.utf8)
+            return (data, response)
+        }
+        defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
+
+        let refresher = OAuthTokenRefresher(tokenStore: store) { request in
+            let (tagged, boxed) = Self.taggedRequest(request, handlerID: handlerID)
+            _ = boxed
+            return try await session.data(for: tagged)
+        }
+        let refreshed = try await refresher.refreshIfNeeded(host: RepoBarAuthDefaults.githubHost, accountID: accountID)
+        #expect(refreshed?.accessToken == "new")
+        #expect(try store.loadTokens(accountID: accountID)?.refreshToken == "r2")
+        #expect(try store.load() == nil)
+    }
+
+    @Test
     func `refresh form encodes reserved characters`() async throws {
         let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
         let store = TokenStore(service: service)

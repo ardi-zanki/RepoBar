@@ -15,7 +15,12 @@ public struct OAuthTokenRefresher: Sendable {
     }
 
     public func refreshIfNeeded(host: URL, force: Bool = false) async throws -> OAuthTokens? {
-        guard var tokens = try tokenStore.load() else { return nil }
+        try await self.refreshIfNeeded(host: host, force: force, accountID: nil)
+    }
+
+    public func refreshIfNeeded(host: URL, force: Bool = false, accountID: String?) async throws -> OAuthTokens? {
+        let loadTokens = accountID.map { try? self.tokenStore.loadTokens(accountID: $0) } ?? (try? self.tokenStore.load())
+        guard var tokens = loadTokens else { return nil }
 
         if tokens.refreshToken.isEmpty {
             return tokens
@@ -24,7 +29,8 @@ public struct OAuthTokenRefresher: Sendable {
             return tokens
         }
 
-        let credentials = try tokenStore.loadClientCredentials()
+        let credentials = try accountID.flatMap { try self.tokenStore.loadClientCredentials(accountID: $0) }
+            ?? self.tokenStore.loadClientCredentials()
             ?? OAuthClientCredentials(clientID: RepoBarAuthDefaults.clientID, clientSecret: RepoBarAuthDefaults.clientSecret)
 
         let base = host.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -58,7 +64,11 @@ public struct OAuthTokenRefresher: Sendable {
                 refreshToken: decoded.refreshToken ?? tokens.refreshToken,
                 expiresAt: expires
             )
-            try self.tokenStore.save(tokens: tokens)
+            if let accountID {
+                try self.tokenStore.save(tokens: tokens, accountID: accountID)
+            } else {
+                try self.tokenStore.save(tokens: tokens)
+            }
             return tokens
         } catch {
             let detail = Self.refreshErrorDetail(from: data)

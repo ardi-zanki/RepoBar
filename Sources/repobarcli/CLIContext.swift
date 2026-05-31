@@ -36,7 +36,10 @@ func makeAuthenticatedClient() async throws -> AuthContext {
             if let pat = try? TokenStore.shared.loadPAT(accountID: account.id) {
                 return OAuthTokens(accessToken: pat, refreshToken: "", expiresAt: nil)
             }
-            return try? TokenStore.shared.loadTokens(accountID: account.id)
+            return try await OAuthTokenRefresher().refreshIfNeeded(
+                host: account.host,
+                accountID: account.id
+            )
         }
         return AuthContext(client: client, settings: settings, host: account.host)
     }
