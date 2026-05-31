@@ -173,7 +173,7 @@ struct ReposCommand: CommanderRunnableCommand {
         }
 
         let now = Date()
-        let baseHost = settings.enterpriseHost ?? settings.githubHost
+        let baseHost = context.host
         let effectiveScope = self.scope ?? (self.pinnedOnly ? .pinned : .all)
         let effectiveOnlyWith = self.filter?.onlyWith ?? self.onlyWith?.filter ?? .none
         let hidden = Set(settings.repoList.hiddenRepositories)

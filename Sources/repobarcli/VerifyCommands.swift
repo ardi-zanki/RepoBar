@@ -199,12 +199,11 @@ struct IssuesCommand: CommanderRunnableCommand {
 
         let context = try await makeAuthenticatedClient()
         let client = context.client
-        let settings = context.settings
         let issues = try await client.recentIssues(owner: repoID.owner, name: repoID.name, limit: self.limit)
 
         if self.output.jsonOutput {
             try printJSON(RepoIssuesOutput(
-                repo: repoID.webURL(baseHost: settings.enterpriseHost ?? settings.githubHost),
+                repo: repoID.webURL(baseHost: context.host),
                 count: issues.count,
                 issues: issues.map {
                     IssueOutput(
@@ -271,12 +270,11 @@ struct PullsCommand: CommanderRunnableCommand {
 
         let context = try await makeAuthenticatedClient()
         let client = context.client
-        let settings = context.settings
         let pulls = try await client.recentPullRequests(owner: repoID.owner, name: repoID.name, limit: self.limit)
 
         if self.output.jsonOutput {
             try printJSON(RepoPullsOutput(
-                repo: repoID.webURL(baseHost: settings.enterpriseHost ?? settings.githubHost),
+                repo: repoID.webURL(baseHost: context.host),
                 count: pulls.count,
                 pulls: pulls.map {
                     PullRequestOutput(

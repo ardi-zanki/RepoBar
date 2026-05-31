@@ -38,13 +38,17 @@ extension AppState {
         guard oauthTokens != nil || legacyPAT != nil else { return nil }
 
         let host = self.session.settings.enterpriseHost ?? self.session.settings.githubHost
-        let preferredMethod: AuthMethod = oauthTokens != nil ? .oauth : .pat
+        let preferredMethod: AuthMethod = if oauthTokens != nil, legacyPAT != nil {
+            self.session.settings.authMethod
+        } else {
+            oauthTokens != nil ? .oauth : .pat
+        }
 
         // Use a one-off probe client to call /user with whichever credentials exist.
         let identity = await self.probeLegacyIdentity(
             host: host,
-            oauthTokens: oauthTokens,
-            pat: legacyPAT
+            oauthTokens: preferredMethod == .oauth ? oauthTokens : nil,
+            pat: preferredMethod == .pat ? legacyPAT : nil
         )
 
         // Fall back to a synthesized identity so PAT-only users without network access still migrate.

@@ -154,8 +154,8 @@ extension AppState {
 
     private func hasAuthenticationMaterial() async -> Bool {
         if let accountID = self.session.settings.resolvedActiveAccount()?.id {
-            let token = try? await self.accountManager.currentAccessToken(accountID: accountID)
-            return token != nil
+            return (try? TokenStore.shared.loadTokens(accountID: accountID)) != nil
+                || (try? TokenStore.shared.loadPAT(accountID: accountID)) != nil
         }
         return self.auth.loadTokens() != nil || self.patAuth.loadPAT() != nil
     }
