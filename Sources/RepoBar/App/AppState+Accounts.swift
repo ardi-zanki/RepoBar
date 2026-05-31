@@ -51,10 +51,9 @@ extension AppState {
             pat: preferredMethod == .pat ? legacyPAT : nil
         )
 
-        // Fall back to a synthesized identity so PAT-only users without network access still migrate.
-        let username = identity?.username
-            ?? self.fallbackUsernameFromSettings()
-            ?? "user"
+        guard let username = identity?.username ?? self.fallbackUsernameFromSettings() else {
+            return nil
+        }
 
         let account = Account(
             username: username,

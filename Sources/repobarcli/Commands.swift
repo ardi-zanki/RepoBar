@@ -493,8 +493,10 @@ struct LogoutCommand: CommanderRunnableCommand {
         if self.all {
             TokenStore.shared.clear()
             TokenStore.shared.clearPAT()
-            for account in settings.accounts {
-                TokenStore.shared.clear(accountID: account.id)
+            let scopedAccountIDs = Set(settings.accounts.map(\.id))
+                .union((try? TokenStore.shared.allAccountIDs()) ?? [])
+            for accountID in scopedAccountIDs {
+                TokenStore.shared.clear(accountID: accountID)
             }
             settings.accounts = []
             settings.activeAccountID = nil
