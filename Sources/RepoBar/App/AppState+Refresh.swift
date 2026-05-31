@@ -216,7 +216,11 @@ extension AppState {
     }
 
     func handleAuthenticationFailure(_ error: Error) async {
+        if let accountID = self.session.settings.resolvedActiveAccount()?.id {
+            TokenStore.shared.clear(accountID: accountID)
+        }
         await self.auth.logout()
+        await self.patAuth.logout()
         let localSnapshot = await self.snapshotForLoggedOutState(localSettings: self.session.settings.localProjects)
         await self.applyLoggedOutState(localSnapshot: localSnapshot, lastError: error.userFacingMessage)
     }

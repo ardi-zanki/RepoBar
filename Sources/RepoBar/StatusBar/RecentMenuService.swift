@@ -9,6 +9,7 @@ final class RecentMenuService {
     let loadTimeout: TimeInterval
 
     private let github: @MainActor () -> GitHubClient
+    private let cacheNamespace: @MainActor () -> String
     private let recentIssuesCache = RecentListCache<RepoIssueSummary>()
     private let recentPullRequestsCache = RecentListCache<RepoPullRequestSummary>()
     private let recentReleasesCache = RecentListCache<RepoReleaseSummary>()
@@ -22,16 +23,29 @@ final class RecentMenuService {
 
     init(
         github: @escaping @MainActor () -> GitHubClient,
+        cacheNamespace: @escaping @MainActor () -> String,
         listLimit: Int = AppLimits.RecentLists.limit,
         previewLimit: Int = AppLimits.RecentLists.previewLimit,
         cacheTTL: TimeInterval = AppLimits.RecentLists.cacheTTL,
         loadTimeout: TimeInterval = AppLimits.RecentLists.loadTimeout
     ) {
         self.github = github
+        self.cacheNamespace = cacheNamespace
         self.listLimit = listLimit
         self.previewLimit = previewLimit
         self.cacheTTL = cacheTTL
         self.loadTimeout = loadTimeout
+    }
+
+    convenience init(appState: AppState) {
+        self.init(
+            github: { [appState] in appState.github },
+            cacheNamespace: { [appState] in appState.session.settings.resolvedActiveAccount()?.id ?? "legacy" }
+        )
+    }
+
+    func cacheKey(fullName: String) -> String {
+        "\(self.cacheNamespace())|\(fullName)"
     }
 
     func descriptor(for kind: RepoRecentMenuKind) -> RecentMenuDescriptor? {
@@ -169,13 +183,15 @@ final class RecentMenuService {
     }
 
     func cachedRecentCommitCount(fullName: String) -> Int? {
-        if let total = self.recentCommitCounts[fullName] { return total }
-        return self.recentCommitsCache.stale(for: fullName)?.count
+        let key = self.cacheKey(fullName: fullName)
+        if let total = self.recentCommitCounts[key] { return total }
+        return self.recentCommitsCache.stale(for: key)?.count
     }
 
     func cachedCommits(fullName: String, now: Date = Date()) -> [RepoCommitSummary]? {
-        self.recentCommitsCache.cached(for: fullName, now: now, maxAge: self.cacheTTL)
-            ?? self.recentCommitsCache.stale(for: fullName)
+        let key = self.cacheKey(fullName: fullName)
+        return self.recentCommitsCache.cached(for: key, now: now, maxAge: self.cacheTTL)
+            ?? self.recentCommitsCache.stale(for: key)
     }
 
     func cachedCommitDigest(fullName: String) -> Int? {
