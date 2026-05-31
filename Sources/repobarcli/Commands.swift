@@ -161,23 +161,9 @@ struct ReposCommand: CommanderRunnableCommand {
             print("RepoBar CLI")
         }
 
-        guard (try? TokenStore.shared.load()) != nil else {
-            throw CLIError.notAuthenticated
-        }
-
-        let settings = SettingsStore().load()
-        let host = settings.enterpriseHost ?? settings.githubHost
-        let apiHost: URL = if let enterprise = settings.enterpriseHost {
-            enterprise.appending(path: "/api/v3")
-        } else {
-            RepoBarAuthDefaults.apiHost
-        }
-
-        let client = GitHubClient()
-        await client.setAPIHost(apiHost)
-        await client.setTokenProvider { @Sendable () async throws -> OAuthTokens? in
-            try await OAuthTokenRefresher().refreshIfNeeded(host: host)
-        }
+        let context = try await makeAuthenticatedClient()
+        let settings = context.settings
+        let client = context.client
 
         var ownerFilter = self.ownerFilter
         if self.mine {
@@ -471,9 +457,7 @@ struct LoginCommand: CommanderRunnableCommand {
         } else {
             settings.accounts.append(account)
         }
-        if settings.activeAccountID == nil {
-            settings.activeAccountID = account.id
-        }
+        settings.activeAccountID = account.id
         store.save(settings)
 
         print("Login succeeded; tokens stored for \(account.id).")
@@ -643,9 +627,7 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
         } else {
             settings.accounts.append(account)
         }
-        if settings.activeAccountID == nil {
-            settings.activeAccountID = account.id
-        }
+        settings.activeAccountID = account.id
         store.save(settings)
 
         print("Successfully imported gh CLI token for \(account.id).")

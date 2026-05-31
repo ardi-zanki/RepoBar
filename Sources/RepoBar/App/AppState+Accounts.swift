@@ -147,14 +147,13 @@ extension AppState {
         }
 
         await self.accountManager.add(account)
+        _ = self.accountManager.setActive(accountID: account.id)
         if let index = self.session.settings.accounts.firstIndex(where: { $0.id == account.id }) {
             self.session.settings.accounts[index] = account
         } else {
             self.session.settings.accounts.append(account)
         }
-        if self.session.settings.activeAccountID == nil {
-            self.session.settings.activeAccountID = account.id
-        }
+        self.session.settings.activeAccountID = account.id
         self.session.activeAccountID = self.accountManager.activeAccountID
         await self.syncPrimaryGitHubClientToActiveAccount()
         self.session.accountSessions = self.session.settings.accounts.map { existing in

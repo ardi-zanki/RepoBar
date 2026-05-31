@@ -99,6 +99,7 @@ struct AccountsUseCommand: CommanderRunnableCommand {
         let store = SettingsStore()
         var settings = store.load()
         let account = try AccountResolver.resolve(self.target, settings: settings)
+        try mirrorAccountCredentialsToLegacy(account)
         settings.activeAccountID = account.id
         store.save(settings)
         print("Active account set to \(account.id).")

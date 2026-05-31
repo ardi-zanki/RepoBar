@@ -24,7 +24,6 @@ struct AccountsListSection: View {
                         Divider()
                     }
                 }
-                self.visibleAccountsToggleSummary
             }
         } header: {
             Text("Accounts")
@@ -50,11 +49,6 @@ struct AccountsListSection: View {
                         Text("active")
                             .foregroundStyle(.green)
                     }
-                    if self.isAccountVisible(account.id) == false {
-                        Text("•")
-                        Text("hidden")
-                            .foregroundStyle(.orange)
-                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -66,11 +60,6 @@ struct AccountsListSection: View {
             }
             .controlSize(.small)
             .disabled(account.id == self.session.settings.activeAccountID)
-
-            Toggle("Visible", isOn: self.visibilityBinding(for: account.id))
-                .toggleStyle(.switch)
-                .labelsHidden()
-                .help("Show this account's repositories in the menu")
 
             Button("Check") {
                 Task { await self.checkToken(for: account.id) }
@@ -86,71 +75,6 @@ struct AccountsListSection: View {
             .help("Remove account")
         }
         .padding(.vertical, 6)
-    }
-
-    @ViewBuilder
-    private var visibleAccountsToggleSummary: some View {
-        if self.session.settings.accounts.count > 1 {
-            HStack(spacing: 8) {
-                Text(self.visibilitySummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Show all") { self.setAllVisible() }
-                    .controlSize(.small)
-                    .disabled(self.session.settings.accountSelection == .all)
-            }
-            .padding(.top, 6)
-        }
-    }
-
-    private var visibilitySummary: String {
-        switch self.session.settings.accountSelection {
-        case .all:
-            "All accounts visible in menu."
-        case let .only(ids):
-            "Showing \(ids.count) of \(self.session.settings.accounts.count) accounts in menu."
-        }
-    }
-
-    private func isAccountVisible(_ accountID: String) -> Bool {
-        self.session.settings.accountSelection.isVisible(accountID)
-    }
-
-    private func visibilityBinding(for accountID: String) -> Binding<Bool> {
-        Binding(
-            get: { self.session.settings.accountSelection.isVisible(accountID) },
-            set: { newValue in self.setVisibility(accountID: accountID, visible: newValue) }
-        )
-    }
-
-    private func setVisibility(accountID: String, visible: Bool) {
-        let allIDs = Set(self.session.settings.accounts.map(\.id))
-        let current: Set<String> = switch self.session.settings.accountSelection {
-        case .all:
-            allIDs
-        case let .only(ids):
-            ids
-        }
-        var next = current
-        if visible {
-            next.insert(accountID)
-        } else {
-            next.remove(accountID)
-        }
-        if next == allIDs {
-            self.session.settings.accountSelection = .all
-        } else {
-            self.session.settings.accountSelection = .only(next)
-        }
-        self.appState.persistSettings()
-        self.appState.requestRefresh(cancelInFlight: true)
-    }
-
-    private func setAllVisible() {
-        self.session.settings.accountSelection = .all
-        self.appState.persistSettings()
-        self.appState.requestRefresh(cancelInFlight: true)
     }
 
     private func checkToken(for accountID: String) async {
