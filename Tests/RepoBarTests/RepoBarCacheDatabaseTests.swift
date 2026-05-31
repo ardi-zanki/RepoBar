@@ -4,6 +4,14 @@ import Testing
 
 struct RepoBarCacheDatabaseTests {
     @Test
+    func `account scoped cache filenames do not collide after encoding`() {
+        let colonID = "ghe.example.com:8443#alice"
+        let dashID = "ghe.example.com-8443#alice"
+
+        #expect(HTTPResponseDiskCache.safeAccountFilename(colonID) != HTTPResponseDiskCache.safeAccountFilename(dashID))
+    }
+
+    @Test
     func `archive importer loads compressed snapshot tables`() throws {
         let root = FileManager.default.temporaryDirectory
             .appending(path: "RepoBarArchiveImporterTests.\(UUID().uuidString)")

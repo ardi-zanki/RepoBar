@@ -196,9 +196,8 @@ final class HTTPResponseDiskCache: @unchecked Sendable {
     }
 
     static func safeAccountFilename(_ accountID: String) -> String {
-        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-")
-        let scalars = accountID.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
-        return String(scalars)
+        let hex = accountID.utf8.map { String(format: "%02x", $0) }.joined()
+        return "v2-\(hex)"
     }
 
     func cached(url: URL) -> PersistentHTTPResponse? {

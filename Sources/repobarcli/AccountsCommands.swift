@@ -57,10 +57,11 @@ struct AccountsListCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let settings = SettingsStore().load()
+        let activeAccountID = settings.resolvedActiveAccount()?.id
         if self.output.jsonOutput {
             let payload = AccountListOutput(
-                activeAccountID: settings.resolvedActiveAccount()?.id,
-                accounts: settings.accounts.map { AccountSummary(from: $0, active: $0.id == settings.activeAccountID) }
+                activeAccountID: activeAccountID,
+                accounts: settings.accounts.map { AccountSummary(from: $0, active: $0.id == activeAccountID) }
             )
             try printJSON(payload)
             return
@@ -71,7 +72,7 @@ struct AccountsListCommand: CommanderRunnableCommand {
             return
         }
         for account in settings.accounts {
-            let marker = account.id == settings.activeAccountID ? "*" : " "
+            let marker = account.id == activeAccountID ? "*" : " "
             let method = account.authMethod.rawValue
             print("\(marker) \(account.id)  [\(method)]  \(account.host.host ?? "github.com")")
         }
