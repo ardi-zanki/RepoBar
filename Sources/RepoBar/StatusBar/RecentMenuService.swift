@@ -48,6 +48,10 @@ final class RecentMenuService {
         "\(self.cacheNamespace())|\(fullName)"
     }
 
+    func cacheContext(fullName: String) -> (key: String, github: GitHubClient) {
+        (self.cacheKey(fullName: fullName), self.github())
+    }
+
     func descriptor(for kind: RepoRecentMenuKind) -> RecentMenuDescriptor? {
         self.descriptors()[kind]
     }
@@ -221,9 +225,8 @@ final class RecentMenuService {
             needsRefresh: { key, now, ttl in
                 self.recentCommitsCache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
-            load: { key, owner, name, limit in
+            load: { key, owner, name, limit, github in
                 let task = self.recentCommitsCache.task(for: key) {
-                    let github = await self.github()
                     let list = try await github.recentCommits(owner: owner, name: name, limit: limit)
                     await MainActor.run {
                         self.recentCommitCounts[key] = list.totalCount ?? list.items.count
@@ -260,10 +263,9 @@ final class RecentMenuService {
             needsRefresh: { key, now, ttl in
                 config.cache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
-            load: { key, owner, name, limit in
+            load: { key, owner, name, limit, github in
                 let task = config.cache.task(for: key) {
-                    let github = await self.github()
-                    return try await fetch(github, owner, name, limit)
+                    try await fetch(github, owner, name, limit)
                 }
                 defer { config.cache.clearInflight(for: key) }
                 let items = try await AsyncTimeout.value(within: self.loadTimeout, task: task)
@@ -293,7 +295,7 @@ struct RecentMenuDescriptor {
     let cached: (String, Date, TimeInterval) -> RecentMenuItems?
     let stale: (String) -> RecentMenuItems?
     let needsRefresh: (String, Date, TimeInterval) -> Bool
-    let load: @MainActor (String, String, String, Int) async throws -> RecentMenuItems
+    let load: @MainActor (String, String, String, Int, GitHubClient) async throws -> RecentMenuItems
 }
 
 enum RecentMenuItems {

@@ -278,6 +278,23 @@ struct TokenStoreTests {
     }
 
     @Test
+    func `file storage reads and clears legacy sanitized filenames`() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("repobar-token-store-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = TokenStore(service: "repobar-tests", storage: .file(directory))
+        let tokens = OAuthTokens(accessToken: "legacy", refreshToken: "legacy-r", expiresAt: nil)
+        let legacyURL = directory.appendingPathComponent("repobar-tests-default.json")
+        try JSONEncoder().encode(tokens).write(to: legacyURL)
+
+        #expect(try store.load() == tokens)
+        store.clear()
+        #expect(try store.load() == nil)
+        #expect(FileManager.default.fileExists(atPath: legacyURL.path) == false)
+    }
+
+    @Test
     func `file storage legacy wrappers do not register fixed keys in account index`() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("repobar-token-store-\(UUID().uuidString)", isDirectory: true)

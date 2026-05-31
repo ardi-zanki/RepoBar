@@ -281,7 +281,8 @@ final class LocalGitMenuCoordinator {
         }
         guard let descriptor = self.recentMenuService.descriptor(for: .branches) else { return }
 
-        let cacheKey = self.recentMenuService.cacheKey(fullName: fullName)
+        let cacheContext = self.recentMenuService.cacheContext(fullName: fullName)
+        let cacheKey = cacheContext.key
 
         let cachedItems = descriptor.cached(cacheKey, now, self.recentMenuService.cacheTTL)
             ?? descriptor.stale(cacheKey)
@@ -302,7 +303,7 @@ final class LocalGitMenuCoordinator {
         guard needsRefresh else { return }
 
         do {
-            let items = try await descriptor.load(cacheKey, owner, name, self.recentMenuService.listLimit)
+            let items = try await descriptor.load(cacheKey, owner, name, self.recentMenuService.listLimit, cacheContext.github)
             let branches = self.remoteBranches(from: items)
             self.populateCombinedBranchMenu(
                 menu: menu,

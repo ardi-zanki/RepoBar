@@ -326,6 +326,7 @@ private extension TokenStore {
     func clear(account: String) {
         if case let .file(directory) = self.storage {
             try? FileManager.default.removeItem(at: self.fileURL(account: account, directory: directory))
+            try? FileManager.default.removeItem(at: self.legacyFileURL(account: account, directory: directory))
             return
         }
 
@@ -385,14 +386,25 @@ private extension TokenStore {
 
     func loadFile(account: String, directory: URL) throws -> Data? {
         let url = self.fileURL(account: account, directory: directory)
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        if FileManager.default.fileExists(atPath: url.path) {
+            return try Data(contentsOf: url)
+        }
 
-        return try Data(contentsOf: url)
+        let legacyURL = self.legacyFileURL(account: account, directory: directory)
+        guard FileManager.default.fileExists(atPath: legacyURL.path) else { return nil }
+
+        return try Data(contentsOf: legacyURL)
     }
 
     func fileURL(account: String, directory: URL) -> URL {
         let serviceName = self.encodedFileComponent(self.service)
         let accountName = self.encodedFileComponent(account)
+        return directory.appendingPathComponent("\(serviceName)-\(accountName).json", isDirectory: false)
+    }
+
+    func legacyFileURL(account: String, directory: URL) -> URL {
+        let serviceName = self.sanitizedFileComponent(self.service)
+        let accountName = self.sanitizedFileComponent(account)
         return directory.appendingPathComponent("\(serviceName)-\(accountName).json", isDirectory: false)
     }
 
@@ -438,16 +450,24 @@ private extension TokenStore {
         return directory.appendingPathComponent("\(serviceName)-accounts-index.json", isDirectory: false)
     }
 
+    func legacyAccountIndexURL(directory: URL) -> URL {
+        let serviceName = self.sanitizedFileComponent(self.service)
+        return directory.appendingPathComponent("\(serviceName)-accounts-index.json", isDirectory: false)
+    }
+
     func loadAccountIndex(directory: URL) -> Set<String> {
-        let url = self.accountIndexURL(directory: directory)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let ids = try? JSONDecoder().decode([String].self, from: data)
-        else {
-            return []
+        for url in [self.accountIndexURL(directory: directory), self.legacyAccountIndexURL(directory: directory)] {
+            guard FileManager.default.fileExists(atPath: url.path),
+                  let data = try? Data(contentsOf: url),
+                  let ids = try? JSONDecoder().decode([String].self, from: data)
+            else {
+                continue
+            }
+
+            return Set(ids)
         }
 
-        return Set(ids)
+        return []
     }
 
     func writeAccountIndex(_ ids: Set<String>, directory: URL) throws {

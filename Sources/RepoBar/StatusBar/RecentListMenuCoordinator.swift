@@ -100,7 +100,8 @@ final class RecentListMenuCoordinator {
         let now = Date()
         guard let descriptor = self.menuService.descriptor(for: kind) else { return }
 
-        let cacheKey = self.menuService.cacheKey(fullName: fullName)
+        let cacheContext = self.menuService.cacheContext(fullName: fullName)
+        let cacheKey = cacheContext.key
         guard descriptor.needsRefresh(cacheKey, now, self.menuService.cacheTTL) else { return }
 
         Task { @MainActor [weak self] in
@@ -108,7 +109,7 @@ final class RecentListMenuCoordinator {
 
             do {
                 self.logger.debug("Prefetch start kind=\(String(describing: kind)) repo=\(fullName)")
-                _ = try await descriptor.load(cacheKey, owner, name, self.menuService.listLimit)
+                _ = try await descriptor.load(cacheKey, owner, name, self.menuService.listLimit, cacheContext.github)
                 self.logger.debug("Prefetch ok kind=\(String(describing: kind)) repo=\(fullName)")
             } catch {
                 self.logger.warning(
@@ -156,7 +157,8 @@ final class RecentListMenuCoordinator {
             systemImage: descriptor.headerIcon
         )
         let actions = self.actions(for: context.kind, fullName: context.fullName)
-        let cacheKey = self.menuService.cacheKey(fullName: context.fullName)
+        let cacheContext = self.menuService.cacheContext(fullName: context.fullName)
+        let cacheKey = cacheContext.key
         let cached = descriptor.cached(cacheKey, now, self.menuService.cacheTTL)
         let stale = cached ?? descriptor.stale(cacheKey)
         let staleExtras = self.recentListExtras(for: context, items: stale)
@@ -188,7 +190,7 @@ final class RecentListMenuCoordinator {
         let startedAt = Date()
         self.logger.info("Recent list refresh start kind=\(String(describing: context.kind)) repo=\(context.fullName)")
         do {
-            let items = try await descriptor.load(cacheKey, owner, name, self.menuService.listLimit)
+            let items = try await descriptor.load(cacheKey, owner, name, self.menuService.listLimit, cacheContext.github)
             self.logger.info(
                 "Recent list refresh ok kind=\(String(describing: context.kind)) repo=\(context.fullName) count=\(items.count) dur=\(Self.formatDuration(since: startedAt))"
             )
