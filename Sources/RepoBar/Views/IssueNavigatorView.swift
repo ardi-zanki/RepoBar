@@ -72,7 +72,7 @@ struct IssueNavigatorView: View {
             self.browserStore.onNavigationStateChange = {
                 self.browserNavigationVersion &+= 1
             }
-            self.updateClipboard(seedIfEmpty: true)
+            self.updateClipboard(seedIfEmpty: Self.shouldSeedClipboardOnAppear(hasInitialMatches: self.results.isEmpty == false))
             if self.results.isEmpty {
                 self.scheduleSearch(immediate: true)
             } else {
@@ -315,7 +315,7 @@ struct IssueNavigatorView: View {
             .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(match.title)
+                Text(match.issueNavigatorHeaderTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .lineLimit(1)
                 HStack(spacing: 6) {
@@ -369,6 +369,10 @@ struct IssueNavigatorView: View {
 
             await self.performSearch(generation: generation)
         }
+    }
+
+    nonisolated static func shouldSeedClipboardOnAppear(hasInitialMatches: Bool) -> Bool {
+        !hasInitialMatches
     }
 
     @MainActor

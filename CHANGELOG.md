@@ -2,6 +2,8 @@
 
 ## 0.7.1 - Unreleased
 
+- Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of "preview unavailable."
+
 ## 0.7.0 - 2026-05-31
 
 - Add copyable update diagnostics in About so Sparkle install-location failures include bundle path, resolved path, signing, Homebrew, translocation, and quarantine signals. (#70)

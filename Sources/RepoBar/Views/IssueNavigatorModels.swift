@@ -50,8 +50,14 @@ struct IssueNavigatorScope: Identifiable, Hashable {
 }
 
 extension GitHubReferenceMatch {
+    var issueNavigatorHeaderTitle: String {
+        self.isResolved ? self.title : self.query.displayText
+    }
+
     var issueNavigatorTitle: String {
-        switch self.query {
+        guard self.isResolved else { return self.query.displayText }
+
+        return switch self.query {
         case let .issueNumber(number),
              let .repositoryNameIssueNumber(_, number),
              let .repositoryIssueNumber(_, number):
