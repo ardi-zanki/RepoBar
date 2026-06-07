@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.1 - Unreleased
+## 0.8.0 - 2026-06-07
 
 - Add optional OpenAI-powered PR summaries to the Issue Navigator sidebar using Tachikoma `chat-latest`, with settings for model and API key storage.
 - Give AI PR summaries more Issue Navigator sidebar room and tune generated summary length to the visible row budget.
