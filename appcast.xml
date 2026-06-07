@@ -3,6 +3,26 @@
     <channel>
         <title>RepoBar</title>
         <item>
+            <title>0.8.0</title>
+            <pubDate>Sun, 07 Jun 2026 00:23:34 -0700</pubDate>
+            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
+            <sparkle:version>21</sparkle:version>
+            <sparkle:shortVersionString>0.8.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>RepoBar 0.8.0</h2>
+<ul>
+<li>Add optional OpenAI-powered PR summaries to the Issue Navigator sidebar using Tachikoma <code>chat-latest</code>, with settings for model and API key storage.</li>
+<li>Give AI PR summaries more Issue Navigator sidebar room and tune generated summary length to the visible row budget.</li>
+<li>Summarize all resolved Issue Navigator items with AI, add compact settings controls for model selection, API key testing, saving, and clearing.</li>
+<li>Keep the separate Issue Navigator window from auto-scrolling embedded GitHub issue previews while preserving the menu dropdown preview scroll offset.</li>
+<li>Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of &quot;preview unavailable.&quot;</li>
+<li>Keep the Repositories settings table from rendering duplicate rows when the same repository is both pinned and hidden (thanks @devYRPauli). (#73)</li>
+</ul>
+<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.0/RepoBar-0.8.0.zip" length="33341339" type="application/octet-stream" sparkle:edSignature="jYWQYc8TWidogh9KJffQpn82UkOqqtS3UGuKQuiFUKOmM5xZMI1+pSNpxoI8399Xmsmu1pKP59/MTLqNFpzkBA=="/>
+        </item>
+        <item>
             <title>0.7.0</title>
             <pubDate>Sun, 31 May 2026 19:17:14 +0100</pubDate>
             <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
@@ -43,25 +63,6 @@
 <p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.6.6/RepoBar-0.6.6.zip" length="25009466" type="application/octet-stream" sparkle:edSignature="10dzsm+fL0krkWQ/j9iB/Fgkke3qJJCFi3Aq7zh8e+6ymL8CI2Qqk9guuHMdTlU/dnHOeDWU2fSp34knSOVDDQ=="/>
-        </item>
-        <item>
-            <title>0.6.5</title>
-            <pubDate>Sun, 24 May 2026 05:16:24 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
-            <sparkle:version>18</sparkle:version>
-            <sparkle:shortVersionString>0.6.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RepoBar 0.6.5</h2>
-<ul>
-<li>Reduce GitHub pressure by throttling REST/GraphQL request lanes, moving repo count/release hydration to GraphQL, and fetching commit-activity heatmaps only for visible rows with a daily TTL.</li>
-<li>Keep REST core rate-limit diagnostics focused on the shared quota instead of filling Current Blocker with per-request cooldown rows.</li>
-<li>Keep copied triage lists with leading bare GitHub references from inheriting incidental repository paths mentioned later in item descriptions.</li>
-<li>Show copied GitHub URL previews immediately with loading placeholders, then update each entry as GitHub metadata resolves.</li>
-<li>Recognize copied repo-heading triage blocks like <code>owner/repo: 1 issue / 1 PR</code> followed by indented <code>#123</code> references.</li>
-</ul>
-<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.6.5/RepoBar-0.6.5.zip" length="24983221" type="application/octet-stream" sparkle:edSignature="xSkGWwfZlico5g2ugOQ2kE5DofeABRpM9FR6hfCWSeyP0YFoJPEuaP/yomYD99ENUTwS5hPsdJgB3dkAAh2dBg=="/>
         </item>
     </channel>
 </rss>
