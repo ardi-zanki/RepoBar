@@ -53,6 +53,30 @@ struct ReleaseSelectionTests {
     }
 
     @Test
+    func `skips prereleases`() throws {
+        let releases = try [
+            releaseResponse(
+                name: "v1.1.0-beta",
+                tagName: "v1.1.0-beta",
+                publishedAt: Date(timeIntervalSince1970: 1_700_300_000),
+                createdAt: Date(timeIntervalSince1970: 1_700_250_000),
+                prerelease: true,
+                url: "https://example.com/1.1.0-beta"
+            ),
+            releaseResponse(
+                name: "v1.0.0",
+                tagName: "v1.0.0",
+                publishedAt: Date(timeIntervalSince1970: 1_700_100_000),
+                createdAt: Date(timeIntervalSince1970: 1_700_050_000),
+                url: "https://example.com/1.0.0"
+            )
+        ]
+
+        let picked = GitHubClient.latestRelease(from: releases)
+        #expect(picked?.tag == "v1.0.0")
+    }
+
+    @Test
     func `returns nil when no releases`() {
         let picked = GitHubClient.latestRelease(from: [])
         #expect(picked == nil)

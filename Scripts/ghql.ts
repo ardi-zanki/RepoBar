@@ -96,7 +96,7 @@ const program = new Command()
 program
   .command('repo')
   .argument('<owner/repo>', 'Repository in owner/name form')
-  .description('Run RepoSnapshot query to fetch issues, PRs, and latest release')
+  .description('Run RepoSnapshot query to fetch issues, PRs, and latest stable release')
   .action(async (slug: string, opts: Record<string, unknown>, cmd: Command) => {
     const spinner = ora('Fetching repo snapshot').start();
     try {
@@ -113,7 +113,17 @@ program
       const { data, rateLimitReset } = await fetchGraphQL<{
         repository: {
           name: string;
-          releases: { nodes?: { name?: string | null; tagName: string; publishedAt: string; url: string }[] };
+          releases: {
+            nodes?: {
+              name?: string | null;
+              tagName: string;
+              publishedAt?: string | null;
+              createdAt?: string | null;
+              url: string;
+              isDraft: boolean;
+              isPrerelease: boolean;
+            }[];
+          };
           issues: { totalCount: number };
           pullRequests: { totalCount: number };
         } | null;
@@ -131,9 +141,15 @@ program
 
       const repo = data.repository;
       if (!repo) throw new Error('Repository not found');
-      const release = repo.releases.nodes?.[0];
+      const release = repo.releases.nodes
+        ?.filter((node) => !node.isDraft && !node.isPrerelease)
+        .sort((lhs, rhs) => {
+          const lhsDate = lhs.publishedAt ?? lhs.createdAt ?? '0001-01-01T00:00:00Z';
+          const rhsDate = rhs.publishedAt ?? rhs.createdAt ?? '0001-01-01T00:00:00Z';
+          return rhsDate.localeCompare(lhsDate);
+        })[0];
       const releaseLine = release
-        ? `${release.name ?? release.tagName} (${new Date(release.publishedAt).toLocaleDateString()})`
+        ? `${release.name ?? release.tagName} (${new Date(release.publishedAt ?? release.createdAt ?? 0).toLocaleDateString()})`
         : 'none';
 
       console.log(
@@ -141,7 +157,7 @@ program
           chalk.bold(`${owner}/${name}`),
           `Issues: ${repo.issues.totalCount}`,
           `PRs: ${repo.pullRequests.totalCount}`,
-          `Latest release: ${releaseLine}`,
+          `Latest stable release: ${releaseLine}`,
         ].join('\n')
       );
       const rl = formatRateLimit(rateLimitReset);

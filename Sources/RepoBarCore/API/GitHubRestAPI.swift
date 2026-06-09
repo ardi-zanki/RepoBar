@@ -630,7 +630,7 @@ struct GitHubRestAPI {
         )
     }
 
-    /// Most recent release (including prereleases) ordered by creation date; skips drafts.
+    /// Most recent stable release ordered by creation date; skips drafts and prereleases.
     /// Returns `nil` if the repository has no releases.
     func latestReleaseAny(owner: String, name: String) async throws -> Release? {
         let token = try await tokenProvider()

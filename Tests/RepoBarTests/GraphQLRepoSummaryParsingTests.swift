@@ -17,7 +17,17 @@ struct GraphQLRepoSummaryParsingTests {
                     "publishedAt": null,
                     "createdAt": "2026-01-03T00:00:00Z",
                     "url": "https://example.com/v3",
-                    "isDraft": true
+                    "isDraft": true,
+                    "isPrerelease": false
+                  },
+                  {
+                    "name": "Prerelease",
+                    "tagName": "v2.1.0-beta",
+                    "publishedAt": "2026-01-05T00:00:00Z",
+                    "createdAt": "2026-01-05T00:00:00Z",
+                    "url": "https://example.com/v2-beta",
+                    "isDraft": false,
+                    "isPrerelease": true
                   },
                   {
                     "name": "Created Later",
@@ -25,7 +35,8 @@ struct GraphQLRepoSummaryParsingTests {
                     "publishedAt": "2026-01-02T00:00:00Z",
                     "createdAt": "2026-01-02T00:00:00Z",
                     "url": "https://example.com/v2-created",
-                    "isDraft": false
+                    "isDraft": false,
+                    "isPrerelease": false
                   },
                   {
                     "name": "Published Later",
@@ -33,7 +44,8 @@ struct GraphQLRepoSummaryParsingTests {
                     "publishedAt": "2026-01-04T00:00:00Z",
                     "createdAt": "2026-01-01T00:00:00Z",
                     "url": "https://example.com/v2",
-                    "isDraft": false
+                    "isDraft": false,
+                    "isPrerelease": false
                   },
                   {
                     "name": "Old",
@@ -41,7 +53,8 @@ struct GraphQLRepoSummaryParsingTests {
                     "publishedAt": "2026-01-01T00:00:00Z",
                     "createdAt": "2026-01-01T00:00:00Z",
                     "url": "https://example.com/v1",
-                    "isDraft": false
+                    "isDraft": false,
+                    "isPrerelease": false
                   }
                 ]
               },

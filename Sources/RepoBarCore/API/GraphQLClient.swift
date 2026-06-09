@@ -47,7 +47,7 @@ actor GraphQLClient {
               repository(owner: $owner, name: $name) {
                 name
                 releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
-                  nodes { name tagName publishedAt createdAt url isDraft }
+                  nodes { name tagName publishedAt createdAt url isDraft isPrerelease }
                 }
                 issues(states: OPEN) { totalCount }
                 pullRequests(states: OPEN) { totalCount }
@@ -122,7 +122,7 @@ actor GraphQLClient {
 
     private nonisolated static func latestRelease(from nodes: [ReleaseNode]) -> Release? {
         let candidates = nodes
-            .filter { !$0.isDraft }
+            .filter { !$0.isDraft && !$0.isPrerelease }
             .sorted {
                 let lhsDate = $0.publishedAt ?? $0.createdAt ?? .distantPast
                 let rhsDate = $1.publishedAt ?? $1.createdAt ?? .distantPast
@@ -323,6 +323,7 @@ private struct ReleaseNode: Decodable {
     let createdAt: Date?
     let url: URL
     let isDraft: Bool
+    let isPrerelease: Bool
 }
 
 private struct CountContainer: Decodable {
