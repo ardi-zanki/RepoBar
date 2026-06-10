@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.1 - Unreleased
+## 0.8.1 - 2026-06-10
 
 - Fix latest release metadata so stable releases still appear when many newer drafts or prereleases exist (thanks @vincentkoc). (#79)
 
