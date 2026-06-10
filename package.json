@@ -22,7 +22,7 @@
     "ghrest": "pnpm exec tsx Scripts/ghrest.ts"
   },
   "dependencies": {
-    "graphql": "^16.14.1"
+    "graphql": "^16.14.2"
   },
   "devDependencies": {
     "@octokit/request": "^10.0.10",
