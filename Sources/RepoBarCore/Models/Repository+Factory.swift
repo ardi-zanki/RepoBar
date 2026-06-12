@@ -21,6 +21,9 @@ extension Repository {
             id: item.id.description,
             name: item.name,
             owner: item.owner.login,
+            description: item.description,
+            language: item.language,
+            topics: item.topics ?? [],
             isFork: item.fork,
             isArchived: item.archived,
             viewerCanRead: item.permissions?.hasReadAccess ?? true,
@@ -47,6 +50,7 @@ extension Repository {
     static func placeholder(
         owner: String,
         name: String,
+        description: String? = nil,
         error: String?,
         rateLimitedUntil: Date?
     ) -> Repository {
@@ -54,6 +58,7 @@ extension Repository {
             id: "\(owner)/\(name)",
             name: name,
             owner: owner,
+            description: description,
             sortOrder: nil,
             error: error,
             rateLimitedUntil: rateLimitedUntil,

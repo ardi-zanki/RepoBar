@@ -96,15 +96,19 @@ public enum RepoAutocompleteScoring {
         )
 
         var score = 0
+        var anyNameOrOwnerMatch = false
+
         if let ownerScore, ownerQuery != nil {
             score += ownerScore
+            anyNameOrOwnerMatch = true
         }
         if let repoScore {
             score += repoScore
+            anyNameOrOwnerMatch = true
         }
 
-        if ownerQuery == nil {
-            if repoScore == nil {
+        if !anyNameOrOwnerMatch {
+            if ownerQuery == nil {
                 let ownerFallback = Self.componentScore(
                     query: lowerQuery,
                     target: repo.owner,
@@ -115,18 +119,51 @@ public enum RepoAutocompleteScoring {
                         subsequence: 30
                     )
                 )
-                guard let ownerFallback else { return nil }
-
-                score += ownerFallback
+                if let ownerFallback {
+                    score += ownerFallback
+                    anyNameOrOwnerMatch = true
+                }
             }
-        } else if ownerScore == nil, repoScore == nil {
-            return nil
         }
 
         if ownerScore != nil, repoScore != nil {
             score += 40
         }
+
+        // Metadata-enhanced scoring: topics, language, description
+        score += Self.topicsScore(query: lowerQuery, topics: repo.topics)
+        score += Self.languageScore(query: lowerQuery, language: repo.language)
+        score += Self.descriptionScore(query: lowerQuery, description: repo.description)
+
         return score == 0 ? nil : score
+    }
+
+    private static func topicsScore(query: String, topics: [String]) -> Int {
+        var best = 0
+        for topic in topics {
+            let lower = topic.lowercased()
+            if lower == query { best = max(best, 400) }
+            else if lower.hasPrefix(query) { best = max(best, 300) }
+            else if lower.contains(query) { best = max(best, 200) }
+        }
+        return best
+    }
+
+    private static func languageScore(query: String, language: String?) -> Int {
+        guard let language, !language.isEmpty else { return 0 }
+        let lower = language.lowercased()
+        if lower == query { return 150 }
+        if lower.hasPrefix(query) { return 100 }
+        if lower.contains(query) { return 60 }
+        return 0
+    }
+
+    private static func descriptionScore(query: String, description: String?) -> Int {
+        guard let description, !description.isEmpty else { return 0 }
+        let lower = description.lowercased()
+        if lower.contains(query) { return 60 }
+        if query.count <= 3, Self.isSubsequence(query, of: lower) { return 30 }
+        return 0
     }
 
     private static func componentScore(

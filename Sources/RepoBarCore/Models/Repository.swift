@@ -4,6 +4,9 @@ public struct Repository: Identifiable, Equatable, Sendable {
     public let id: String
     public let name: String
     public let owner: String
+    public let description: String?
+    public let language: String?
+    public let topics: [String]
     public let isFork: Bool
     public let isArchived: Bool
     public let viewerCanRead: Bool
@@ -25,6 +28,9 @@ public struct Repository: Identifiable, Equatable, Sendable {
         id: String,
         name: String,
         owner: String,
+        description: String? = nil,
+        language: String? = nil,
+        topics: [String] = [],
         isFork: Bool = false,
         isArchived: Bool = false,
         viewerCanRead: Bool = true,
@@ -49,6 +55,9 @@ public struct Repository: Identifiable, Equatable, Sendable {
         self.id = id
         self.name = name
         self.owner = owner
+        self.description = description
+        self.language = language
+        self.topics = topics
         self.isFork = isFork
         self.isArchived = isArchived
         self.viewerCanRead = viewerCanRead
@@ -82,6 +91,9 @@ public struct Repository: Identifiable, Equatable, Sendable {
             id: self.id,
             name: self.name,
             owner: self.owner,
+            description: self.description,
+            language: self.language,
+            topics: self.topics,
             isFork: self.isFork,
             isArchived: self.isArchived,
             viewerCanRead: self.viewerCanRead,

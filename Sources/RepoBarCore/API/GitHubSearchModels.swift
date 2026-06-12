@@ -8,6 +8,9 @@ struct RepoItem: Decodable {
     let id: Int
     let name: String
     let fullName: String
+    let description: String?
+    let language: String?
+    let topics: [String]?
     let fork: Bool
     let archived: Bool
     let hasDiscussions: Bool?
@@ -21,7 +24,7 @@ struct RepoItem: Decodable {
     struct Owner: Decodable { let login: String }
 
     enum CodingKeys: String, CodingKey {
-        case id, name
+        case id, name, description, language, topics
         case fullName = "full_name"
         case fork
         case archived
