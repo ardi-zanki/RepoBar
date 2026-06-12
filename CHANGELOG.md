@@ -2,6 +2,8 @@
 
 ## 0.8.2 - Unreleased
 
+- Streamline the GitHub API submenu by showing sample age once, while moving shared-budget guidance into a dedicated API settings tab.
+
 ## 0.8.1 - 2026-06-10
 
 - Fix latest release metadata so stable releases still appear when many newer drafts or prereleases exist (thanks @vincentkoc). (#79)

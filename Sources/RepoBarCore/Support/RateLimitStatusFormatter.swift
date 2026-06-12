@@ -228,19 +228,12 @@ public enum RateLimitStatusFormatter {
             let errorDetail = diagnostics.lastRateLimitError.map {
                 Self.cleanedBlockerText($0, fallback: "")
             }
-            let detailText = [
-                errorDetail,
-                Self.sharedUserBudgetText
-            ]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { $0.isEmpty == false }
-            .joined(separator: " ")
             rows.append(RateLimitDisplayRow(
                 text: "REST core blocked",
                 resource: "core",
                 quotaText: "0 left",
                 resetText: "resets \(RelativeFormatter.string(from: reset, relativeTo: now))",
-                detailText: detailText,
+                detailText: errorDetail,
                 percentRemaining: 0
             ))
         }
@@ -326,9 +319,6 @@ public enum RateLimitStatusFormatter {
         }
         return rows
     }
-
-    private static let sharedUserBudgetText = "Shared GitHub user budget; RepoBar, PATs, OAuth/GitHub App user tokens, " +
-        "and gh CLI requests for this account can spend this core quota. Extra tokens do not create extra user quota."
 
     private static let ghCLIExceptionText = "gh CLI may still work after RepoBar/PAT/OAuth requests are blocked because GitHub " +
         "grants the CLI app extra allowance; using gh still spends normal user quota first."

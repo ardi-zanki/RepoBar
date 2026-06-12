@@ -104,6 +104,35 @@ struct RateLimitJuiceTests {
     }
 
     @Test
+    func `display state reports freshest shared sample time`() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 275)
+        let diagnostics = try DiagnosticsSummary(
+            apiHost: #require(URL(string: "https://api.github.com")),
+            rateLimitReset: nil,
+            lastRateLimitError: nil,
+            etagEntries: 0,
+            backoffEntries: 0,
+            restRateLimit: RateLimitSnapshot(
+                resource: "core",
+                limit: 5000,
+                remaining: 4000,
+                used: 1000,
+                reset: nil,
+                fetchedAt: now
+            ),
+            graphQLRateLimit: nil,
+            rateLimitResources: RateLimitResourcesSnapshot(
+                fetchedAt: now.addingTimeInterval(10),
+                resources: [:]
+            )
+        )
+
+        let state = RateLimitDisplayState(diagnostics: diagnostics)
+
+        #expect(state.lastUpdatedAt == now.addingTimeInterval(10))
+    }
+
+    @Test
     func `active limit renders as empty lane`() throws {
         let now = Date(timeIntervalSinceReferenceDate: 300)
         let diagnostics = try DiagnosticsSummary(

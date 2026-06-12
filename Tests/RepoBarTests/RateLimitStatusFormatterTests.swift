@@ -304,7 +304,7 @@ struct RateLimitStatusFormatterTests {
     }
 
     @Test
-    func `current blocker explains shared token budget while live buckets stay visible`() throws {
+    func `current blocker stays concise while live buckets stay visible`() throws {
         let now = Date(timeIntervalSinceReferenceDate: 7000)
         let diagnostics = try DiagnosticsSummary(
             apiHost: #require(URL(string: "https://api.github.com")),
@@ -349,7 +349,7 @@ struct RateLimitStatusFormatterTests {
         )
 
         #expect(summary.contains("Blocked: REST core blocked"))
-        #expect(summary.contains("Shared GitHub user budget"))
+        #expect(summary.contains("Shared GitHub user budget") == false)
         #expect(sections.map(\.title) == ["Current Blocker", "REST Core", "GraphQL"])
         #expect(sections[0].resourceRows.first?.quotaText == "0 left")
         #expect(sections[0].resourceRows.first?.resetText == "resets in 2 min.")

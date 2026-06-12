@@ -104,19 +104,12 @@ extension StatusBarMenuBuilder {
         return self.viewItem(for: view, enabled: false)
     }
 
-    func rateLimitSectionHeaderItem(_ title: String) -> NSMenuItem {
-        self.viewItem(for: RateLimitSectionHeaderView(title: title), enabled: false)
+    func rateLimitSectionHeaderItem(_ title: String, detail: String?) -> NSMenuItem {
+        self.viewItem(for: RateLimitSectionHeaderView(title: title, detail: detail), enabled: false)
     }
 
-    func rateLimitResourceItem(_ row: RateLimitDisplayRow) -> NSMenuItem {
-        self.viewItem(for: RateLimitResourceRowView(row: row), enabled: false)
-    }
-
-    func rateLimitsMenuItem(now: Date = Date()) -> NSMenuItem {
-        let item = NSMenuItem(title: "GitHub API Status", action: nil, keyEquivalent: "")
-        item.image = self.cachedSystemImage(named: "speedometer")
-        item.submenu = self.rateLimitsSubmenu(now: now)
-        return item
+    func rateLimitResourceItem(_ row: RateLimitDisplayRow, showsReset: Bool) -> NSMenuItem {
+        self.viewItem(for: RateLimitResourceRowView(row: row, showsReset: showsReset), enabled: false)
     }
 
     func rateLimitsStatusMenuItem(now: Date = Date()) -> NSMenuItem {
@@ -133,29 +126,68 @@ extension StatusBarMenuBuilder {
         )
     }
 
-    private func rateLimitsSubmenu(now: Date = Date()) -> NSMenu {
-        self.rateLimitsSubmenu(state: self.appState.session.rateLimitDisplayState, now: now)
-    }
-
     private func rateLimitsSubmenu(state: RateLimitDisplayState, now: Date) -> NSMenu {
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         submenu.delegate = self.target
 
-        let sections = state.sections(now: now)
+        let hasActiveEndpointCooldown = state.diagnostics.endpointCooldowns.contains { $0.retryAfter > now }
+        let hasActiveQuotaBlocker = state.diagnostics.rateLimitReset.map { $0 > now } ?? false
+            || (state.cacheSummary?.rateLimits.contains { $0.resetAt > now } ?? false)
+        let sections = state.sections(now: now).filter {
+            if $0.title == "Current Status" || $0.title == "Budget Model" {
+                return false
+            }
+            if $0.title == "Current Blocker", hasActiveEndpointCooldown, hasActiveQuotaBlocker == false {
+                return false
+            }
+            return true
+        }
         for (index, section) in sections.enumerated() {
             if index > 0 {
                 submenu.addItem(.separator())
             }
+            let sharedReset = Self.sharedResetText(in: section)
             if let title = section.title {
-                submenu.addItem(self.rateLimitSectionHeaderItem(title))
+                submenu.addItem(self.rateLimitSectionHeaderItem(title, detail: sharedReset))
             }
-            for row in section.resourceRows {
-                submenu.addItem(self.rateLimitResourceItem(row))
+            for resourceRow in section.resourceRows {
+                submenu.addItem(self.rateLimitResourceItem(resourceRow, showsReset: sharedReset == nil))
             }
         }
 
+        var hasFooterContent = sections.isEmpty == false
+        if let updatedAt = state.lastUpdatedAt {
+            if sections.isEmpty == false {
+                submenu.addItem(.separator())
+            }
+            let updated = RelativeFormatter.string(from: updatedAt, relativeTo: now)
+            submenu.addItem(self.viewItem(
+                for: RateLimitUpdatedRowView(text: "Updated \(updated)"),
+                enabled: false
+            ))
+            hasFooterContent = true
+        }
+
+        if hasFooterContent {
+            submenu.addItem(.separator())
+        }
+        submenu.addItem(self.actionItem(
+            title: "Open API Settings…",
+            action: #selector(self.target.openAPIStatus),
+            systemImage: "gear"
+        ))
         return submenu
+    }
+
+    private static func sharedResetText(in section: RateLimitDisplaySection) -> String? {
+        let resetTexts = section.resourceRows.compactMap(\.resetText)
+        guard resetTexts.count == section.resourceRows.count,
+              let first = resetTexts.first,
+              resetTexts.allSatisfy({ $0 == first })
+        else { return nil }
+
+        return first
     }
 
     // MARK: - Actions & Runners

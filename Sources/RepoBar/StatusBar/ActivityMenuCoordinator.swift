@@ -33,7 +33,7 @@ final class ActivityMenuCoordinator {
         if hasHeaderItem {
             menu.addItem(.separator())
         }
-        menu.addItem(self.menuBuilder.rateLimitsMenuItem())
+        menu.addItem(self.menuBuilder.rateLimitsStatusMenuItem())
 
         let commitEvents = self.appState.session.globalCommitEvents
         let activityEvents = self.appState.session.globalActivityEvents

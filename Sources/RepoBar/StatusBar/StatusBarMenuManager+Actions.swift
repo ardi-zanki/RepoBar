@@ -2,6 +2,11 @@ import AppKit
 import RepoBarCore
 
 extension StatusBarMenuManager {
+    @objc func openAPIStatus() {
+        self.appState.session.settingsSelectedTab = .api
+        SettingsOpener.shared.open()
+    }
+
     @objc func logOut() {
         Task { @MainActor in
             await self.appState.logoutCurrentMethod()

@@ -147,16 +147,22 @@ struct MenuInfoTextRowView: View {
 
 struct RateLimitSectionHeaderView: View {
     let title: String
+    let detail: String?
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(self.title.uppercased())
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+
+            if let detail {
+                Text(detail)
+                    .font(.caption2)
+                    .lineLimit(1)
+            }
         }
+        .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, RateLimitMenuMetrics.horizontalPadding)
         .padding(.top, 7)
@@ -166,88 +172,76 @@ struct RateLimitSectionHeaderView: View {
 
 struct RateLimitResourceRowView: View {
     let row: RateLimitDisplayRow
+    let showsReset: Bool
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 5) {
             if self.row.resource != nil || self.row.quotaText != nil {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(self.row.resource ?? self.row.text)
-                            .font(.caption.weight(.medium))
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(self.row.resource ?? self.row.text)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Spacer(minLength: 8)
+
+                    if let quota = self.row.quotaText {
+                        Text(quota)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             .lineLimit(1)
-                            .truncationMode(.middle)
-
-                        Spacer(minLength: 8)
-
-                        if let quota = self.row.quotaText {
-                            Text(quota)
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
                     }
+                }
 
-                    if let percent = self.row.percentRemaining {
-                        RateLimitProgressBar(
-                            percent: percent,
-                            tint: Self.tint(for: percent),
-                            accessibilityLabel: self.row.resource ?? "GitHub rate limit"
-                        )
-                    }
+                if let percent = self.row.percentRemaining {
+                    RateLimitProgressBar(
+                        percent: percent,
+                        tint: Self.tint(for: percent),
+                        accessibilityLabel: self.row.resource ?? "GitHub rate limit"
+                    )
+                }
 
-                    if let reset = self.row.resetText, let sampled = self.sampledDetail {
-                        HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            Text(reset)
-                                .lineLimit(1)
-
-                            Spacer(minLength: 8)
-
-                            Text(sampled)
-                                .lineLimit(1)
-                        }
+                if self.showsReset, let reset = self.row.resetText {
+                    Text(reset)
                         .font(.caption2)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                    } else if let reset = self.row.resetText {
-                        Text(reset)
-                            .font(.caption2)
-                            .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                            .lineLimit(1)
-                    }
+                        .lineLimit(1)
+                }
 
-                    if let detail = self.nonSampledDetail {
-                        Text(detail)
-                            .font(.caption2)
-                            .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                if let detail = self.nonSampledDetail {
+                    Text(detail)
+                        .font(.caption2)
+                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 Text(self.row.text)
                     .font(.caption)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                    .lineLimit(5)
+                    .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, RateLimitMenuMetrics.horizontalPadding)
         .padding(.vertical, 4)
     }
 
-    private var sampledDetail: String? {
-        guard let detail = self.row.detailText, detail.hasPrefix("sampled ") else { return nil }
-
-        return detail
-    }
-
     private var nonSampledDetail: String? {
-        guard let detail = self.row.detailText, detail.isEmpty == false else { return nil }
+        guard let detail = self.row.detailText,
+              detail.isEmpty == false,
+              detail.hasPrefix("sampled ") == false
+        else { return nil }
 
-        return self.sampledDetail == nil ? detail : nil
+        if let reset = self.row.resetText {
+            let repeatedSuffix = " · \(reset)"
+            if detail.hasSuffix(repeatedSuffix) {
+                return String(detail.dropLast(repeatedSuffix.count))
+            }
+        }
+        return detail
     }
 
     private static func tint(for percent: Double) -> Color {
@@ -258,6 +252,19 @@ struct RateLimitResourceRowView: View {
             return Color(nsColor: .systemOrange)
         }
         return Color(nsColor: .systemGreen)
+    }
+}
+
+struct RateLimitUpdatedRowView: View {
+    let text: String
+
+    var body: some View {
+        Text(self.text)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, RateLimitMenuMetrics.horizontalPadding)
+            .padding(.vertical, 5)
     }
 }
 

@@ -22,6 +22,17 @@ public struct RateLimitDisplayState: Sendable {
         )
     }
 
+    public var lastUpdatedAt: Date? {
+        [
+            self.diagnostics.rateLimitResources?.fetchedAt,
+            self.diagnostics.restRateLimit?.fetchedAt,
+            self.diagnostics.graphQLRateLimit?.fetchedAt,
+            self.cacheSummary?.latestResponses.map(\.fetchedAt).max()
+        ]
+        .compactMap(\.self)
+        .max()
+    }
+
     public func compactSummary(now: Date = Date()) -> String {
         RateLimitStatusFormatter.compactSummary(
             diagnostics: self.diagnostics,
