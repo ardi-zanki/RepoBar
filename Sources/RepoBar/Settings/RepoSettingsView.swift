@@ -1,3 +1,4 @@
+import AppKit
 import RepoBarCore
 import SwiftUI
 
@@ -77,6 +78,10 @@ struct RepoSettingsView: View {
                         }
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    }
+                    .help("Double-click to open in GitHub")
+                    .onTapGesture(count: 2) {
+                        self.openInGitHub(fullName: row.fullName)
                     }
                 }
                 .width(min: 300, ideal: 420, max: .infinity)
@@ -172,6 +177,15 @@ struct RepoSettingsView: View {
             return snapshotRepos
         }
         return self.session.repositories
+    }
+
+    private var webURLBuilder: RepoWebURLBuilder {
+        RepoWebURLBuilder(host: self.session.settings.githubHost)
+    }
+
+    private func openInGitHub(fullName: String) {
+        guard let url = self.webURLBuilder.repoURL(fullName: fullName) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func addNewRepo(_ value: String) {
