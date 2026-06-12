@@ -50,6 +50,26 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text("Scoped to pinned repositories. The first refresh records the current state without sending notifications.")
             }
+
+            Section {
+                Toggle("Release notifications", isOn: self.$session.settings.gitHubReleaseNotifications.enabled)
+                    .onChange(of: self.session.settings.gitHubReleaseNotifications.enabled) { _, enabled in
+                        if enabled {
+                            self.appState.resetGitHubReleaseNotificationSnapshots()
+                            self.appState.requestRefresh(cancelInFlight: true)
+                        }
+                        self.appState.persistSettings()
+                    }
+
+                if self.session.settings.gitHubReleaseNotifications.enabled {
+                    Toggle("Include pre-releases", isOn: self.$session.settings.gitHubReleaseNotifications.includePrereleases)
+                        .onChange(of: self.session.settings.gitHubReleaseNotifications.includePrereleases) { _, _ in
+                            self.appState.persistSettings()
+                        }
+                }
+            } footer: {
+                Text("Notifies when a pinned repository publishes a new release.")
+            }
         }
         .formStyle(.grouped)
         .padding()

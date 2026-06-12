@@ -65,6 +65,7 @@ extension AppState {
                 }
             }
             await self.processGitHubPullRequestNotifications()
+            await self.processGitHubReleaseNotifications()
             let repos = try await self.fetchActivityRepos()
             try Task.checkCancellation()
             await self.updateAccessibleRepositories(repos)

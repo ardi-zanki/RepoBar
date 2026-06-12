@@ -2,6 +2,8 @@
 
 ## 0.8.3 - Unreleased
 
+- Add opt-in release notifications for pinned repositories that post a notification when a repository publishes a new release, with a separate toggle to include pre-releases (off by default). The first refresh records existing releases without notifying. (#82)
+
 ## 0.8.2 - 2026-06-12
 
 - Streamline the GitHub API submenu by showing sample age once, while moving shared-budget guidance into a dedicated API settings tab.
