@@ -8,6 +8,7 @@ public struct UserSettings: Equatable, Codable {
     public var gitHubReferenceMonitor = GitHubReferenceMonitorSettings()
     public var aiSummaries = AISummarySettings()
     public var gitHubPullRequestNotifications = GitHubPullRequestNotificationSettings()
+    public var gitHubReleaseNotifications = GitHubReleaseNotificationSettings()
     public var githubArchives = GitHubArchiveSettings()
     public var menuCustomization = MenuCustomization()
     public var refreshInterval: RefreshInterval = .fiveMinutes
@@ -39,6 +40,7 @@ public struct UserSettings: Equatable, Codable {
         case gitHubReferenceMonitor
         case aiSummaries
         case gitHubPullRequestNotifications
+        case gitHubReleaseNotifications
         case legacyIssueNumberMonitor = "issueNumberMonitor"
         case githubArchives
         case menuCustomization
@@ -74,6 +76,10 @@ public struct UserSettings: Equatable, Codable {
             GitHubPullRequestNotificationSettings.self,
             forKey: .gitHubPullRequestNotifications
         ) ?? GitHubPullRequestNotificationSettings()
+        self.gitHubReleaseNotifications = try container.decodeIfPresent(
+            GitHubReleaseNotificationSettings.self,
+            forKey: .gitHubReleaseNotifications
+        ) ?? GitHubReleaseNotificationSettings()
         self.githubArchives = try container.decodeIfPresent(GitHubArchiveSettings.self, forKey: .githubArchives) ?? GitHubArchiveSettings()
         self.menuCustomization = try container.decodeIfPresent(MenuCustomization.self, forKey: .menuCustomization) ?? MenuCustomization()
         self.refreshInterval = try container.decodeIfPresent(RefreshInterval.self, forKey: .refreshInterval) ?? .fiveMinutes
@@ -117,6 +123,7 @@ public struct UserSettings: Equatable, Codable {
         try container.encode(self.gitHubReferenceMonitor, forKey: .gitHubReferenceMonitor)
         try container.encode(self.aiSummaries, forKey: .aiSummaries)
         try container.encode(self.gitHubPullRequestNotifications, forKey: .gitHubPullRequestNotifications)
+        try container.encode(self.gitHubReleaseNotifications, forKey: .gitHubReleaseNotifications)
         try container.encode(self.githubArchives, forKey: .githubArchives)
         try container.encode(self.menuCustomization, forKey: .menuCustomization)
         try container.encode(self.refreshInterval, forKey: .refreshInterval)
@@ -383,6 +390,24 @@ public enum GitHubPullRequestNotificationClickAction: String, CaseIterable, Hash
         case .openInBrowser: "Default browser"
         case .openIssueNavigator: "Issue Navigator"
         }
+    }
+}
+
+public struct GitHubReleaseNotificationSettings: Equatable, Codable, Sendable {
+    public var enabled = false
+    public var includePrereleases = false
+
+    public init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case includePrereleases
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        self.includePrereleases = try container.decodeIfPresent(Bool.self, forKey: .includePrereleases) ?? false
     }
 }
 

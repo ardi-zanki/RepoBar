@@ -24,6 +24,8 @@ enum SettingsKey: String, CaseIterable {
     case pullRequestNotificationReviews = "pull-request-notification-reviews"
     case pullRequestNotificationComments = "pull-request-notification-comments"
     case pullRequestNotificationClick = "pull-request-notification-click"
+    case releaseNotifications = "release-notifications"
+    case releaseNotificationPrereleases = "release-notification-prereleases"
     case cardDensity = "card-density"
     case accentTone = "accent-tone"
     case activityScope = "activity-scope"
@@ -77,6 +79,10 @@ enum SettingsKey: String, CaseIterable {
             self = .pullRequestNotificationComments
         case "pull-request-notification-click", "pr-notification-click", "notification-click":
             self = .pullRequestNotificationClick
+        case "release-notifications", "github-release-notifications", "new-release-notifications":
+            self = .releaseNotifications
+        case "release-notification-prereleases", "release-notification-prerelease", "release-prereleases", "include-prereleases":
+            self = .releaseNotificationPrereleases
         case "card-density", "density":
             self = .cardDensity
         case "accent-tone", "accent":
@@ -194,6 +200,14 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         let action = try parsePullRequestNotificationClickAction(value)
         settings.gitHubPullRequestNotifications.clickAction = action
         return action.label
+    case .releaseNotifications:
+        let flag = try parseBool(value)
+        settings.gitHubReleaseNotifications.enabled = flag
+        return flag ? "on" : "off"
+    case .releaseNotificationPrereleases:
+        let flag = try parseBool(value)
+        settings.gitHubReleaseNotifications.includePrereleases = flag
+        return flag ? "on" : "off"
     case .cardDensity:
         guard let density = CardDensity(rawValue: value.lowercased()) else {
             throw ValidationError("Invalid card-density value: \(value)")
@@ -295,6 +309,8 @@ func settingsSummaryLines(settings: UserSettings) -> [String] {
         "PR notifications: \(settings.gitHubPullRequestNotifications.enabled ? "on" : "off")",
         "PR notification events: \(pullRequestNotificationEventsLabel(settings.gitHubPullRequestNotifications))",
         "PR notification click: \(settings.gitHubPullRequestNotifications.clickAction.label)",
+        "Release notifications: \(settings.gitHubReleaseNotifications.enabled ? "on" : "off")",
+        "Release notification pre-releases: \(settings.gitHubReleaseNotifications.includePrereleases ? "on" : "off")",
         "Card density: \(settings.appearance.cardDensity.rawValue)",
         "Accent tone: \(settings.appearance.accentTone.rawValue)",
         "Activity scope: \(settings.appearance.activityScope.rawValue)",

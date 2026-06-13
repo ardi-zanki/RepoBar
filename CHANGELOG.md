@@ -2,6 +2,7 @@
 
 ## 0.8.3 - Unreleased
 
+- Add opt-in release notifications for pinned repositories, including an optional pre-release toggle, first-refresh backlog protection, and rate-conscious polling at most every 15 minutes (thanks @LeoLin990405). (#82)
 - Round compact stat badges (issue, PR, star, and release download counts) to the nearest thousand and million instead of truncating, so a count like 19,999 shows as "20K" rather than "19K" and matches GitHub's own compact numbers (thanks @LeoLin990405). (#81)
 
 ## 0.8.2 - 2026-06-12
