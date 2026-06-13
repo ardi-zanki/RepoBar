@@ -1,3 +1,4 @@
+import AppKit
 import RepoBarCore
 import SwiftUI
 
@@ -121,9 +122,13 @@ struct RepoSettingsView: View {
             .frame(minHeight: 280)
             .onDeleteCommand { self.deleteSelection() }
             .contextMenu(forSelectionType: String.self) { selection in
+                Button("Open in GitHub") { self.openInGitHub(selection: selection) }
+                Divider()
                 Button("Pin") { Task { await self.bulkSet(selection, to: .pinned) } }
                 Button("Hide") { Task { await self.bulkSet(selection, to: .hidden) } }
                 Button("Set Visible") { Task { await self.bulkSet(selection, to: .visible) } }
+            } primaryAction: { selection in
+                self.openInGitHub(selection: selection)
             }
 
             HStack(spacing: 10) {
@@ -172,6 +177,18 @@ struct RepoSettingsView: View {
             return snapshotRepos
         }
         return self.session.repositories
+    }
+
+    private var webURLBuilder: RepoWebURLBuilder {
+        RepoWebURLBuilder(host: self.session.settings.githubHost)
+    }
+
+    private func openInGitHub(selection: Set<String>) {
+        for row in self.filteredRows where selection.contains(row.id) {
+            guard let url = self.webURLBuilder.repoURL(fullName: row.fullName) else { continue }
+
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private func addNewRepo(_ value: String) {
