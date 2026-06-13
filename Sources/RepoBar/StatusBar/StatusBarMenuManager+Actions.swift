@@ -2,8 +2,9 @@ import AppKit
 import RepoBarCore
 
 extension StatusBarMenuManager {
-    @objc func openAPIStatus() {
-        self.appState.session.settingsSelectedTab = .api
+    @objc func openAPIUsage() {
+        self.appState.session.settingsSelectedTab = .accounts
+        self.appState.session.settingsAPIUsageExpanded = true
         SettingsOpener.shared.open()
     }
 

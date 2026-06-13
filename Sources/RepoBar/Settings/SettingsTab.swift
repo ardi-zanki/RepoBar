@@ -6,7 +6,6 @@ enum SettingsTab: Hashable {
     case display
     case repositories
     case accounts
-    case api
     case notifications
     case advanced
     case about
@@ -24,7 +23,6 @@ enum SettingsTab: Hashable {
         case .display: "Display"
         case .repositories: "Repositories"
         case .accounts: "Accounts"
-        case .api: "API"
         case .notifications: "Notifications"
         case .advanced: "Advanced"
         case .about: "About"

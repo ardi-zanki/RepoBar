@@ -1,7 +1,7 @@
 import RepoBarCore
 import SwiftUI
 
-struct GitHubAPISettingsView: View {
+struct GitHubAPIUsageSection: View {
     @Bindable var session: Session
     let appState: AppState
     @State private var isRefreshing = false
@@ -10,46 +10,62 @@ struct GitHubAPISettingsView: View {
         let now = Date()
         let state = self.session.rateLimitDisplayState
 
-        Form {
-            Section {
-                LabeledContent("Status") {
-                    Text(state.compactSummary(now: now))
-                        .multilineTextAlignment(.trailing)
-                }
+        Section {
+            DisclosureGroup(isExpanded: self.$session.settingsAPIUsageExpanded) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        if let updated = self.lastUpdatedText(state: state, now: now) {
+                            Text("Updated \(updated)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
-                if let updated = self.lastUpdatedText(state: state, now: now) {
-                    LabeledContent("Updated") {
-                        Text(updated)
+                        Spacer()
+
+                        Button {
+                            Task { await self.refresh() }
+                        } label: {
+                            if self.isRefreshing {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                Label("Refresh", systemImage: "arrow.clockwise")
+                            }
+                        }
+                        .controlSize(.small)
+                        .disabled(self.isRefreshing)
+                    }
+
+                    ForEach(Array(self.detailSections(state: state, now: now).enumerated()), id: \.offset) { _, section in
+                        GitHubAPIUsageGroup(section: section)
                     }
                 }
+                .padding(.top, 10)
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "speedometer")
+                        .foregroundStyle(state.isLimited(now: now) ? .orange : .secondary)
+                        .frame(width: 18)
 
-                Button {
-                    Task { await self.refresh() }
-                } label: {
-                    if self.isRefreshing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Text("Refresh")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Usage Details")
+                            .font(.body.weight(.medium))
+                        Text(state.compactSummary(now: now))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .disabled(self.isRefreshing)
-            } header: {
-                Text("GitHub API Status")
             }
-
-            ForEach(Array(self.detailSections(state: state, now: now).enumerated()), id: \.offset) { _, section in
-                Section(section.title ?? "Details") {
-                    ForEach(Array(section.resourceRows.enumerated()), id: \.offset) { _, row in
-                        GitHubAPIRateLimitRow(row: row)
-                    }
-                }
-            }
+        } header: {
+            Text("GitHub API")
+        } footer: {
+            Text("Usage for the active account, including shared budgets, reset times, and current blockers.")
         }
-        .formStyle(.grouped)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .task {
+        .task(id: self.session.settingsAPIUsageExpanded) {
+            guard self.session.settingsAPIUsageExpanded else { return }
+
             await self.refresh()
         }
     }
@@ -72,6 +88,37 @@ struct GitHubAPISettingsView: View {
         self.isRefreshing = true
         defer { self.isRefreshing = false }
         await self.appState.refreshRateLimitDisplayState()
+    }
+}
+
+private struct GitHubAPIUsageGroup: View {
+    let section: RateLimitDisplaySection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(self.section.title ?? "Details")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(self.section.resourceRows.enumerated()), id: \.offset) { index, row in
+                    if index > 0 {
+                        Divider()
+                    }
+                    GitHubAPIRateLimitRow(row: row)
+                }
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .textBackgroundColor).opacity(0.35))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            )
+        }
     }
 }
 

@@ -22,9 +22,6 @@ struct SettingsView: View {
             AccountSettingsView(session: self.session, appState: self.appState)
                 .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
                 .tag(SettingsTab.accounts)
-            GitHubAPISettingsView(session: self.session, appState: self.appState)
-                .tabItem { Label("API", systemImage: "speedometer") }
-                .tag(SettingsTab.api)
             NotificationSettingsView(session: self.session, appState: self.appState)
                 .tabItem { Label("Notifications", systemImage: "bell.badge") }
                 .tag(SettingsTab.notifications)
@@ -80,7 +77,6 @@ struct SettingsView: View {
             SettingsTab.display.title,
             SettingsTab.repositories.title,
             SettingsTab.accounts.title,
-            SettingsTab.api.title,
             SettingsTab.notifications.title,
             SettingsTab.advanced.title,
             SettingsTab.about.title

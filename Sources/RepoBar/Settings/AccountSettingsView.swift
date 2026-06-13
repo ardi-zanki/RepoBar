@@ -23,6 +23,7 @@ struct AccountSettingsView: View {
     var body: some View {
         Form {
             AccountsListSection(session: self.session, appState: self.appState)
+            GitHubAPIUsageSection(session: self.session, appState: self.appState)
 
             Section("Add Account") {
                 Picker("Host", selection: self.$hostMode) {

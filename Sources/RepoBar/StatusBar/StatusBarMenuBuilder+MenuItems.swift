@@ -173,9 +173,9 @@ extension StatusBarMenuBuilder {
             submenu.addItem(.separator())
         }
         submenu.addItem(self.actionItem(
-            title: "Open API Settings…",
-            action: #selector(self.target.openAPIStatus),
-            systemImage: "gear"
+            title: "View API Usage…",
+            action: #selector(self.target.openAPIUsage),
+            systemImage: "speedometer"
         ))
         return submenu
     }

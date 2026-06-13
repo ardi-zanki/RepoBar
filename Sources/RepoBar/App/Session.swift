@@ -13,6 +13,7 @@ final class Session {
     var hasLoadedRepositories = false
     var settings = UserSettings()
     var settingsSelectedTab: SettingsTab = .general
+    var settingsAPIUsageExpanded = false
     var rateLimitReset: Date?
     var rateLimitDiagnostics: DiagnosticsSummary = .empty
     var rateLimitCacheSummary: RepoBarCacheSummary?
