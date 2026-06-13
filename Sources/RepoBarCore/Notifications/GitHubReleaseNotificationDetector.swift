@@ -26,12 +26,12 @@ public struct GitHubReleaseNotificationEvent: Identifiable, Equatable, Sendable 
 }
 
 public struct GitHubReleaseNotificationSnapshotState: Equatable, Codable, Sendable {
-    public var repositories: [String: [String: Date]]
+    public var repositories: [String: [String: GitHubReleaseNotificationSnapshot]]
     public var repositoryBaselines: [String: Date]
     public var lastCheckedAt: Date?
 
     public init(
-        repositories: [String: [String: Date]] = [:],
+        repositories: [String: [String: GitHubReleaseNotificationSnapshot]] = [:],
         repositoryBaselines: [String: Date] = [:],
         lastCheckedAt: Date? = nil
     ) {
@@ -48,9 +48,22 @@ public struct GitHubReleaseNotificationSnapshotState: Equatable, Codable, Sendab
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.repositories = try container.decodeIfPresent([String: [String: Date]].self, forKey: .repositories) ?? [:]
+        self.repositories = try container.decodeIfPresent(
+            [String: [String: GitHubReleaseNotificationSnapshot]].self,
+            forKey: .repositories
+        ) ?? [:]
         self.repositoryBaselines = try container.decodeIfPresent([String: Date].self, forKey: .repositoryBaselines) ?? [:]
         self.lastCheckedAt = try container.decodeIfPresent(Date.self, forKey: .lastCheckedAt)
+    }
+}
+
+public struct GitHubReleaseNotificationSnapshot: Equatable, Codable, Sendable {
+    public let publishedAt: Date
+    public let isPrerelease: Bool
+
+    public init(publishedAt: Date, isPrerelease: Bool) {
+        self.publishedAt = publishedAt
+        self.isPrerelease = isPrerelease
     }
 }
 
@@ -93,9 +106,17 @@ public enum GitHubReleaseNotificationDetector {
 
             let previousReleases = previousRepositories[repositoryKey]
             let previousBaseline = previousBaselines[repositoryKey]
-                ?? previousReleases?.values.max()
+                ?? previousReleases?.values.map(\.publishedAt).max()
             nextState.repositories[repositoryKey] = Dictionary(
-                releases.map { ($0.tag, $0.publishedAt) },
+                releases.map {
+                    (
+                        $0.tag,
+                        GitHubReleaseNotificationSnapshot(
+                            publishedAt: $0.publishedAt,
+                            isPrerelease: $0.isPrerelease
+                        )
+                    )
+                },
                 uniquingKeysWith: { first, _ in first }
             )
             nextState.repositoryBaselines[repositoryKey] = max(previousBaseline ?? observedAt, observedAt)
@@ -105,12 +126,14 @@ public enum GitHubReleaseNotificationDetector {
             }
 
             for release in releases {
-                guard previousReleases[release.tag] == nil else { continue }
+                let previousRelease = previousReleases[release.tag]
+                let wasPromotedToStable = previousRelease?.isPrerelease == true && release.isPrerelease == false
+                guard previousRelease == nil || wasPromotedToStable else { continue }
 
                 if release.isPrerelease, settings.includePrereleases == false { continue }
 
                 let isNewAfterBaseline = previousBaseline.map { release.publishedAt > $0 } ?? false
-                guard isNewAfterBaseline else { continue }
+                guard isNewAfterBaseline || wasPromotedToStable else { continue }
 
                 events.append(Self.event(repositoryFullName: repositoryFullName, release: release))
             }
@@ -127,6 +150,7 @@ public enum GitHubReleaseNotificationDetector {
             "github-release",
             Self.repositoryKey(repositoryFullName).replacingOccurrences(of: "/", with: "-"),
             Self.tagMarker(release.tag),
+            release.isPrerelease ? "prerelease" : "release",
             Self.dateMarker(release.publishedAt)
         ].joined(separator: "-")
 

@@ -10,7 +10,14 @@ struct GitHubReleaseNotificationSnapshotStoreTests {
         defaults.removePersistentDomain(forName: suiteName)
         let store = GitHubReleaseNotificationSnapshotStore(defaults: defaults)
         let state = GitHubReleaseNotificationSnapshotState(
-            repositories: ["steipete/repobar": ["v1.0.0": Date(timeIntervalSince1970: 100)]],
+            repositories: [
+                "steipete/repobar": [
+                    "v1.0.0": GitHubReleaseNotificationSnapshot(
+                        publishedAt: Date(timeIntervalSince1970: 100),
+                        isPrerelease: false
+                    )
+                ]
+            ],
             repositoryBaselines: ["steipete/repobar": Date(timeIntervalSince1970: 150)],
             lastCheckedAt: Date(timeIntervalSince1970: 175)
         )

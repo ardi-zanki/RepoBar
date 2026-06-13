@@ -49,7 +49,10 @@ struct GitHubReleaseNotificationDetectorTests {
         )
 
         #expect(result.events.isEmpty)
-        #expect(result.state.repositories["steipete/repobar"]?["v1.0.0"] == Self.date(100))
+        #expect(
+            result.state.repositories["steipete/repobar"]?["v1.0.0"]
+                == GitHubReleaseNotificationSnapshot(publishedAt: Self.date(100), isPrerelease: false)
+        )
         #expect(result.state.repositoryBaselines["steipete/repobar"] == Self.date(150))
     }
 
@@ -132,6 +135,80 @@ struct GitHubReleaseNotificationDetectorTests {
     }
 
     @Test
+    func `pre-release promoted to stable emits when pre-releases are excluded`() {
+        let first = GitHubReleaseNotificationDetector.events(
+            for: [
+                "steipete/RepoBar": [
+                    Self.release(tag: "v1.1.0", publishedAt: Self.date(200), isPrerelease: true),
+                    Self.release(tag: "v1.0.0", publishedAt: Self.date(100))
+                ]
+            ],
+            previousState: GitHubReleaseNotificationSnapshotState(),
+            settings: Self.enabledSettings(),
+            observedAt: Self.date(250)
+        )
+
+        let second = GitHubReleaseNotificationDetector.events(
+            for: [
+                "steipete/RepoBar": [
+                    Self.release(tag: "v1.1.0", publishedAt: Self.date(200)),
+                    Self.release(tag: "v1.0.0", publishedAt: Self.date(100))
+                ]
+            ],
+            previousState: first.state,
+            settings: Self.enabledSettings(),
+            observedAt: Self.date(300)
+        )
+
+        #expect(second.events.count == 1)
+        #expect(second.events.first?.tag == "v1.1.0")
+        #expect(second.events.first?.isPrerelease == false)
+    }
+
+    @Test
+    func `pre-release and promoted release use distinct notification identifiers`() {
+        var settings = Self.enabledSettings()
+        settings.includePrereleases = true
+        let baseline = GitHubReleaseNotificationSnapshotState(
+            repositories: [
+                "steipete/repobar": [
+                    "v1.0.0": GitHubReleaseNotificationSnapshot(
+                        publishedAt: Self.date(100),
+                        isPrerelease: false
+                    )
+                ]
+            ],
+            repositoryBaselines: ["steipete/repobar": Self.date(150)]
+        )
+        let prerelease = GitHubReleaseNotificationDetector.events(
+            for: [
+                "steipete/RepoBar": [
+                    Self.release(tag: "v1.1.0", publishedAt: Self.date(200), isPrerelease: true),
+                    Self.release(tag: "v1.0.0", publishedAt: Self.date(100))
+                ]
+            ],
+            previousState: baseline,
+            settings: settings,
+            observedAt: Self.date(250)
+        )
+        let stable = GitHubReleaseNotificationDetector.events(
+            for: [
+                "steipete/RepoBar": [
+                    Self.release(tag: "v1.1.0", publishedAt: Self.date(200)),
+                    Self.release(tag: "v1.0.0", publishedAt: Self.date(100))
+                ]
+            ],
+            previousState: prerelease.state,
+            settings: settings,
+            observedAt: Self.date(300)
+        )
+
+        #expect(prerelease.events.count == 1)
+        #expect(stable.events.count == 1)
+        #expect(prerelease.events.first?.id != stable.events.first?.id)
+    }
+
+    @Test
     func `older release re-entering window does not emit as new`() {
         let first = GitHubReleaseNotificationDetector.events(
             for: ["steipete/RepoBar": [Self.release(tag: "v2.0.0", publishedAt: Self.date(200))]],
@@ -158,7 +235,14 @@ struct GitHubReleaseNotificationDetectorTests {
     @Test
     func `disabled settings emit nothing and preserve state`() {
         let previous = GitHubReleaseNotificationSnapshotState(
-            repositories: ["steipete/repobar": ["v1.0.0": Self.date(100)]],
+            repositories: [
+                "steipete/repobar": [
+                    "v1.0.0": GitHubReleaseNotificationSnapshot(
+                        publishedAt: Self.date(100),
+                        isPrerelease: false
+                    )
+                ]
+            ],
             repositoryBaselines: ["steipete/repobar": Self.date(150)]
         )
 
