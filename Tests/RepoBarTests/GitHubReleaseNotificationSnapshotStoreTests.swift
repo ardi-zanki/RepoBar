@@ -11,7 +11,8 @@ struct GitHubReleaseNotificationSnapshotStoreTests {
         let store = GitHubReleaseNotificationSnapshotStore(defaults: defaults)
         let state = GitHubReleaseNotificationSnapshotState(
             repositories: ["steipete/repobar": ["v1.0.0": Date(timeIntervalSince1970: 100)]],
-            repositoryBaselines: ["steipete/repobar": Date(timeIntervalSince1970: 150)]
+            repositoryBaselines: ["steipete/repobar": Date(timeIntervalSince1970: 150)],
+            lastCheckedAt: Date(timeIntervalSince1970: 175)
         )
 
         store.save(state)
@@ -20,6 +21,27 @@ struct GitHubReleaseNotificationSnapshotStoreTests {
         #expect(loaded == state)
 
         store.clear()
+
+        #expect(store.load() == GitHubReleaseNotificationSnapshotState())
+    }
+
+    @Test
+    func `snapshot store decodes state written before poll tracking`() throws {
+        let suiteName = "GitHubReleaseNotificationSnapshotStoreTests.legacy.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(
+            Data(
+                """
+                {
+                  "repositories": {},
+                  "repositoryBaselines": {}
+                }
+                """.utf8
+            ),
+            forKey: GitHubReleaseNotificationSnapshotStore.storageKey
+        )
+        let store = GitHubReleaseNotificationSnapshotStore(defaults: defaults)
 
         #expect(store.load() == GitHubReleaseNotificationSnapshotState())
     }

@@ -68,7 +68,7 @@ struct NotificationSettingsView: View {
                         }
                 }
             } footer: {
-                Text("Notifies when a pinned repository publishes a new release.")
+                Text("Notifies when a pinned repository publishes a new release. Checks at most every 15 minutes and uses GitHub's conditional request cache.")
             }
         }
         .formStyle(.grouped)

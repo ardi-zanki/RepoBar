@@ -4,6 +4,8 @@ import RepoBarCore
 
 @MainActor
 final class GitHubReleaseNotificationRunner {
+    private static let minimumPollInterval: TimeInterval = 15 * 60
+
     private let snapshotStore: GitHubReleaseNotificationSnapshotStore
     private let logger = RepoBarLogging.logger("GitHubNotifications")
 
@@ -26,13 +28,22 @@ final class GitHubReleaseNotificationRunner {
         }
 
         let refreshStartedAt = Date()
+        let previousState = self.snapshotStore.load()
+        guard GitHubReleaseNotificationDetector.shouldPoll(
+            previousState: previousState,
+            now: refreshStartedAt,
+            minimumInterval: Self.minimumPollInterval
+        ) else {
+            self.logger.debug("Skipping GitHub release notification refresh; last poll is still fresh")
+            return
+        }
+
         let releasesByRepository = await self.fetchPinnedReleases(
             for: pinnedRepositories,
             github: github,
             concurrencyLimit: concurrencyLimit
         )
 
-        let previousState = self.snapshotStore.load()
         let result = GitHubReleaseNotificationDetector.events(
             for: releasesByRepository,
             previousState: previousState,
@@ -40,7 +51,9 @@ final class GitHubReleaseNotificationRunner {
             trackedRepositoryFullNames: pinnedRepositories,
             observedAt: refreshStartedAt
         )
-        self.snapshotStore.save(result.state)
+        var nextState = result.state
+        nextState.lastCheckedAt = refreshStartedAt
+        self.snapshotStore.save(nextState)
 
         self.logger.debug(
             "GitHub release notification refresh: repos=\(releasesByRepository.count), previousRepos=\(previousState.repositories.count), events=\(result.events.count)"

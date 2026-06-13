@@ -28,28 +28,44 @@ public struct GitHubReleaseNotificationEvent: Identifiable, Equatable, Sendable 
 public struct GitHubReleaseNotificationSnapshotState: Equatable, Codable, Sendable {
     public var repositories: [String: [String: Date]]
     public var repositoryBaselines: [String: Date]
+    public var lastCheckedAt: Date?
 
     public init(
         repositories: [String: [String: Date]] = [:],
-        repositoryBaselines: [String: Date] = [:]
+        repositoryBaselines: [String: Date] = [:],
+        lastCheckedAt: Date? = nil
     ) {
         self.repositories = repositories
         self.repositoryBaselines = repositoryBaselines
+        self.lastCheckedAt = lastCheckedAt
     }
 
     private enum CodingKeys: String, CodingKey {
         case repositories
         case repositoryBaselines
+        case lastCheckedAt
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.repositories = try container.decodeIfPresent([String: [String: Date]].self, forKey: .repositories) ?? [:]
         self.repositoryBaselines = try container.decodeIfPresent([String: Date].self, forKey: .repositoryBaselines) ?? [:]
+        self.lastCheckedAt = try container.decodeIfPresent(Date.self, forKey: .lastCheckedAt)
     }
 }
 
 public enum GitHubReleaseNotificationDetector {
+    public static func shouldPoll(
+        previousState: GitHubReleaseNotificationSnapshotState,
+        now: Date = Date(),
+        minimumInterval: TimeInterval
+    ) -> Bool {
+        guard minimumInterval > 0, let lastCheckedAt = previousState.lastCheckedAt else { return true }
+
+        let elapsed = now.timeIntervalSince(lastCheckedAt)
+        return elapsed < 0 || elapsed >= minimumInterval
+    }
+
     public static func events(
         for currentReleases: [String: [RepoReleaseSummary]],
         previousState: GitHubReleaseNotificationSnapshotState,
@@ -66,7 +82,8 @@ public enum GitHubReleaseNotificationDetector {
         let previousBaselines = previousState.repositoryBaselines.filter { trackedRepositoryKeys.contains($0.key) }
         var nextState = GitHubReleaseNotificationSnapshotState(
             repositories: previousRepositories,
-            repositoryBaselines: previousBaselines
+            repositoryBaselines: previousBaselines,
+            lastCheckedAt: previousState.lastCheckedAt
         )
         var events: [GitHubReleaseNotificationEvent] = []
 

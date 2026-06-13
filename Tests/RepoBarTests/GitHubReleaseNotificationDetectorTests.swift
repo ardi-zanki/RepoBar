@@ -4,6 +4,42 @@ import Testing
 
 struct GitHubReleaseNotificationDetectorTests {
     @Test
+    func `polls when no previous check exists`() {
+        #expect(GitHubReleaseNotificationDetector.shouldPoll(
+            previousState: GitHubReleaseNotificationSnapshotState(),
+            now: Self.date(1000),
+            minimumInterval: 900
+        ))
+    }
+
+    @Test
+    func `skips polling until minimum interval elapses`() {
+        let state = GitHubReleaseNotificationSnapshotState(lastCheckedAt: Self.date(1000))
+
+        #expect(GitHubReleaseNotificationDetector.shouldPoll(
+            previousState: state,
+            now: Self.date(1899),
+            minimumInterval: 900
+        ) == false)
+        #expect(GitHubReleaseNotificationDetector.shouldPoll(
+            previousState: state,
+            now: Self.date(1900),
+            minimumInterval: 900
+        ))
+    }
+
+    @Test
+    func `polls after clock moves backwards`() {
+        let state = GitHubReleaseNotificationSnapshotState(lastCheckedAt: Self.date(1000))
+
+        #expect(GitHubReleaseNotificationDetector.shouldPoll(
+            previousState: state,
+            now: Self.date(900),
+            minimumInterval: 900
+        ))
+    }
+
+    @Test
     func `first snapshot does not emit backlog`() {
         let result = GitHubReleaseNotificationDetector.events(
             for: ["steipete/RepoBar": [Self.release(tag: "v1.0.0", publishedAt: Self.date(100))]],

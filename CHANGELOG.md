@@ -2,7 +2,7 @@
 
 ## 0.8.3 - Unreleased
 
-- Add opt-in release notifications for pinned repositories that post a notification when a repository publishes a new release, with a separate toggle to include pre-releases (off by default). The first refresh records existing releases without notifying. (#82)
+- Add opt-in release notifications for pinned repositories, including an optional pre-release toggle, first-refresh backlog protection, and rate-conscious polling at most every 15 minutes (thanks @LeoLin990405). (#82)
 
 ## 0.8.2 - 2026-06-12
 
