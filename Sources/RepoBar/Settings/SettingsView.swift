@@ -40,7 +40,14 @@ struct SettingsView: View {
                 .tag(SettingsTab.about)
         }
         .tabViewStyle(.automatic)
-        .frame(width: self.contentWidth, height: self.contentHeight)
+        .frame(
+            minWidth: SettingsTab.minimumContentSize.width,
+            idealWidth: self.contentWidth,
+            maxWidth: .infinity,
+            minHeight: SettingsTab.minimumContentSize.height,
+            idealHeight: self.contentHeight,
+            maxHeight: .infinity
+        )
         .onAppear {
             self.updateLayout(for: self.session.settingsSelectedTab, animate: false)
         }
@@ -103,6 +110,7 @@ struct SettingsView: View {
 
     private static func clampedSettingsContentSize(desired: NSSize) -> NSSize {
         guard let window = self.settingsWindow else { return desired }
+
         return SettingsWindowSizing.clampedContentSize(
             desired: desired,
             visibleFrame: (window.screen ?? NSScreen.main)?.visibleFrame,
@@ -181,7 +189,7 @@ enum SettingsWindowSizing {
 
     /// AppKit's `contentMinSize` is already expressed in content coordinates.
     static func minimumContentSize(for minimum: NSSize) -> NSSize {
-        return NSSize(
+        NSSize(
             width: max(minimum.width, 1),
             height: max(minimum.height, 1)
         )
