@@ -114,6 +114,16 @@ struct SettingsWindowSizingTests {
     }
 
     @Test
+    func `minimumContentSize does not exceed a smaller screen maximum`() {
+        let result = SettingsWindowSizing.minimumContentSize(
+            for: NSSize(width: 420, height: 360),
+            maximum: NSSize(width: 392, height: 276)
+        )
+        #expect(result.width == 392)
+        #expect(result.height == 276)
+    }
+
+    @Test
     func `maximumContentSize subtracts chrome from the visible frame`() {
         let result = SettingsWindowSizing.maximumContentSize(
             for: NSRect(x: 0, y: 63, width: 1440, height: 807),
