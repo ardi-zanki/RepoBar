@@ -119,7 +119,10 @@ struct RepoSettingsView: View {
                 .width(min: 128, ideal: 136, max: 144)
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(minHeight: 280)
+            // Keep the surrounding controls visible when the window is clamped on a small
+            // display; the table consumes the remaining space and scrolls its own rows.
+            .frame(minHeight: 180, maxHeight: .infinity)
+            .layoutPriority(1)
             .onDeleteCommand { self.deleteSelection() }
             .contextMenu(forSelectionType: String.self) { selection in
                 Button("Open in GitHub") { self.openInGitHub(selection: selection) }

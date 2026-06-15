@@ -40,7 +40,14 @@ struct SettingsView: View {
                 .tag(SettingsTab.about)
         }
         .tabViewStyle(.automatic)
-        .frame(width: self.contentWidth, height: self.contentHeight)
+        .frame(
+            minWidth: SettingsTab.minimumContentSize.width,
+            idealWidth: self.contentWidth,
+            maxWidth: .infinity,
+            minHeight: SettingsTab.minimumContentSize.height,
+            idealHeight: self.contentHeight,
+            maxHeight: .infinity
+        )
         .onAppear {
             self.updateLayout(for: self.session.settingsSelectedTab, animate: false)
         }
@@ -57,16 +64,25 @@ struct SettingsView: View {
     }
 
     private func updateLayout(for tab: SettingsTab, animate: Bool) {
-        let change = {
-            self.contentWidth = tab.preferredWidth
-            self.contentHeight = tab.preferredHeight
+        let desiredContentSize = NSSize(width: tab.preferredWidth, height: tab.preferredHeight)
+        let contentSize = Self.clampedSettingsContentSize(
+            desired: desiredContentSize
+        )
+        let previousTopEdge = Self.settingsWindow?.frame.maxY
+        self.contentWidth = contentSize.width
+        self.contentHeight = contentSize.height
+
+        // Let SwiftUI finish resizing its Settings window before applying AppKit bounds or
+        // repositioning it. Mutating the frame during that constraint pass can crash AppKit.
+        Task { @MainActor in
+            await Task.yield()
+            if animate {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            guard self.session.settingsSelectedTab == tab else { return }
+
+            Self.configureSettingsWindow(contentSize: contentSize, previousTopEdge: previousTopEdge)
         }
-        if animate {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { change() }
-        } else {
-            change()
-        }
-        Self.resizeSettingsWindow(width: tab.preferredWidth, height: tab.preferredHeight, animate: animate)
     }
 
     private static let settingsWindowIdentifier = "com_apple_SwiftUI_Settings_window"
@@ -87,19 +103,143 @@ struct SettingsView: View {
         return Set(titles)
     }
 
-    private static func resizeSettingsWindow(width: CGFloat, height: CGFloat, animate: Bool) {
-        guard let window = NSApp.windows.first(where: {
+    private static var settingsWindow: NSWindow? {
+        NSApp.windows.first(where: {
             $0.identifier?.rawValue == self.settingsWindowIdentifier
                 || self.knownTabTitles.contains($0.title)
-        }) else { return }
+        })
+    }
 
-        let toolbarHeight = window.frame.height - window.contentLayoutRect.height
-        guard toolbarHeight > 0 else { return }
+    private static func clampedSettingsContentSize(desired: NSSize) -> NSSize {
+        guard let window = self.settingsWindow else { return desired }
 
-        let newSize = NSSize(width: width, height: height + toolbarHeight)
+        return SettingsWindowSizing.clampedContentSize(
+            desired: desired,
+            visibleFrame: (window.screen ?? NSScreen.main)?.visibleFrame,
+            chrome: self.settingsWindowChrome(for: window)
+        )
+    }
+
+    private static func configureSettingsWindow(contentSize: NSSize, previousTopEdge: CGFloat?) {
+        guard let window = self.settingsWindow else { return }
+
+        let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame
+        let chrome = self.settingsWindowChrome(for: window)
+
+        // Establish resizability bounds once, derived from the actual chrome so the user
+        // can drag the window edge to a sensible size but never past the screen.
+        if let visibleFrame {
+            let maximumContentSize = SettingsWindowSizing.maximumContentSize(
+                for: visibleFrame,
+                chrome: chrome
+            )
+            window.contentMinSize = SettingsWindowSizing.minimumContentSize(
+                for: SettingsTab.minimumContentSize,
+                maximum: maximumContentSize
+            )
+            window.contentMaxSize = maximumContentSize
+        } else {
+            window.contentMinSize = SettingsWindowSizing.minimumContentSize(
+                for: SettingsTab.minimumContentSize
+            )
+        }
+
         var frame = window.frame
-        frame.origin.y += frame.size.height - newSize.height
-        frame.size = newSize
-        window.setFrame(frame, display: true, animate: animate)
+        frame.size = NSSize(
+            width: contentSize.width + chrome.width,
+            height: contentSize.height + chrome.height
+        )
+        if let visibleFrame {
+            frame.origin.x = SettingsWindowSizing.clampedWindowOriginX(
+                proposedOriginX: frame.origin.x,
+                windowWidth: frame.width,
+                visibleFrame: visibleFrame
+            )
+            frame.origin.y = SettingsWindowSizing.clampedWindowOriginY(
+                proposedOriginY: previousTopEdge.map { $0 - frame.height } ?? frame.origin.y,
+                windowHeight: frame.height,
+                visibleFrame: visibleFrame
+            )
+        }
+        window.setFrame(frame, display: true, animate: false)
+    }
+
+    private static func settingsWindowChrome(for window: NSWindow) -> NSSize {
+        NSSize(
+            width: max(0, window.frame.width - window.contentLayoutRect.width),
+            height: max(0, window.frame.height - window.contentLayoutRect.height)
+        )
+    }
+}
+
+/// Pure helpers for sizing the Settings window. Kept AppKit-free at the core so we can unit
+/// test the clamping logic without standing up an `NSWindow` in tests.
+enum SettingsWindowSizing {
+    /// Clamp a desired content size so its enclosing frame (content + chrome) fits inside
+    /// `visibleFrame` (i.e. the screen area not covered by the menu bar or Dock). Returns the
+    /// desired size unchanged when no visible frame is available.
+    static func clampedContentSize(
+        desired: NSSize,
+        visibleFrame: NSRect?,
+        chrome: NSSize = .zero
+    ) -> NSSize {
+        guard let visibleFrame else { return desired }
+
+        let chromeWidth = max(0, chrome.width)
+        let chromeHeight = max(0, chrome.height)
+        let maxWidth = max(1, visibleFrame.width - chromeWidth)
+        let maxHeight = max(1, visibleFrame.height - chromeHeight)
+        return NSSize(
+            width: min(desired.width, maxWidth),
+            height: min(desired.height, maxHeight)
+        )
+    }
+
+    /// AppKit's `contentMinSize` is already expressed in content coordinates.
+    static func minimumContentSize(for minimum: NSSize, maximum: NSSize? = nil) -> NSSize {
+        let normalizedMinimum = NSSize(
+            width: max(minimum.width, 1),
+            height: max(minimum.height, 1)
+        )
+        guard let maximum else { return normalizedMinimum }
+
+        return NSSize(
+            width: min(normalizedMinimum.width, max(maximum.width, 1)),
+            height: min(normalizedMinimum.height, max(maximum.height, 1))
+        )
+    }
+
+    /// AppKit expects `contentMaxSize` in content coordinates, so remove the window chrome
+    /// from the screen's visible frame before applying the resize limit.
+    static func maximumContentSize(
+        for visibleFrame: NSRect,
+        chrome: NSSize
+    ) -> NSSize {
+        let chromeWidth = max(0, chrome.width)
+        let chromeHeight = max(0, chrome.height)
+        return NSSize(
+            width: max(visibleFrame.width - chromeWidth, 1),
+            height: max(visibleFrame.height - chromeHeight, 1)
+        )
+    }
+
+    static func clampedWindowOriginX(
+        proposedOriginX: CGFloat,
+        windowWidth: CGFloat,
+        visibleFrame: NSRect
+    ) -> CGFloat {
+        let minimumOriginX = visibleFrame.minX
+        let maximumOriginX = max(minimumOriginX, visibleFrame.maxX - max(windowWidth, 0))
+        return min(max(proposedOriginX, minimumOriginX), maximumOriginX)
+    }
+
+    static func clampedWindowOriginY(
+        proposedOriginY: CGFloat,
+        windowHeight: CGFloat,
+        visibleFrame: NSRect
+    ) -> CGFloat {
+        let minimumOriginY = visibleFrame.minY
+        let maximumOriginY = max(minimumOriginY, visibleFrame.maxY - max(windowHeight, 0))
+        return min(max(proposedOriginY, minimumOriginY), maximumOriginY)
     }
 }
