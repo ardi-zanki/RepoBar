@@ -119,7 +119,11 @@ struct RepoSettingsView: View {
                 .width(min: 128, ideal: 136, max: 144)
             }
             .tableStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(minHeight: 280)
+            // Cap the table so the Settings window doesn't grow to fill the screen.
+            // SwiftUI's Table sometimes ignores soft `maxHeight` constraints when there's
+            // available vertical space, so we use a fixed height and rely on the Table's
+            // own internal scrolling once the row count exceeds what fits.
+            .frame(height: 460)
             .onDeleteCommand { self.deleteSelection() }
             .contextMenu(forSelectionType: String.self) { selection in
                 Button("Open in GitHub") { self.openInGitHub(selection: selection) }

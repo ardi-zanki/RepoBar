@@ -49,7 +49,7 @@ enum SettingsTab: Hashable {
         switch self {
         case .general: 540
         case .display: 540
-        case .repositories: 770
+        case .repositories: 660
         case .accounts: 620
         case .notifications: 540
         case .advanced: 600

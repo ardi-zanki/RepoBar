@@ -31,7 +31,11 @@ struct RepoBarApp: App {
             SettingsView(session: self.appState.session, appState: self.appState)
         }
         .defaultSize(width: SettingsTab.general.preferredWidth, height: SettingsTab.general.preferredHeight)
-        .windowResizability(.contentSize)
+        // Use contentMinSize (not contentSize) so the window uses the per-tab preferred
+        // size from `resizeSettingsWindow` as its initial size and only grows if the user
+        // drags it. Without this, an unbounded table (Repositories tab) would expand the
+        // window to fill the entire screen.
+        .windowResizability(.contentMinSize)
     }
 }
 
