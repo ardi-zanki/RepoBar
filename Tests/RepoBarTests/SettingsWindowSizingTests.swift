@@ -48,6 +48,18 @@ struct SettingsWindowSizingTests {
     }
 
     @Test
+    func `clamps content height using the full settings toolbar chrome`() {
+        let visible = NSRect(x: 0, y: 50, width: 1440, height: 600)
+        let result = SettingsWindowSizing.clampedContentSize(
+            desired: NSSize(width: 540, height: 660),
+            visibleFrame: visible,
+            chrome: NSSize(width: 0, height: 88)
+        )
+        #expect(result.height == 512)
+        #expect(result.height + 88 == visible.height)
+    }
+
+    @Test
     func `clamps both axes when the desired window is larger than the screen`() {
         let visible = NSRect(x: 0, y: 0, width: 400, height: 300)
         let chrome = NSSize(width: 8, height: 24)

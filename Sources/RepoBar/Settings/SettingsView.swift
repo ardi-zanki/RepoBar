@@ -106,7 +106,7 @@ struct SettingsView: View {
         return SettingsWindowSizing.clampedContentSize(
             desired: desired,
             visibleFrame: (window.screen ?? NSScreen.main)?.visibleFrame,
-            chrome: window.frameRect(forContentRect: .zero).size
+            chrome: self.settingsWindowChrome(for: window)
         )
     }
 
@@ -114,7 +114,7 @@ struct SettingsView: View {
         guard let window = self.settingsWindow else { return }
 
         let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame
-        let chrome = window.frameRect(forContentRect: .zero).size
+        let chrome = self.settingsWindowChrome(for: window)
 
         // Establish resizability bounds once, derived from the actual chrome so the user
         // can drag the window edge to a sensible size but never past the screen.
@@ -129,9 +129,11 @@ struct SettingsView: View {
             )
         }
 
-        let toolbarHeight = max(0, window.frame.height - window.contentLayoutRect.height)
         var frame = window.frame
-        frame.size = NSSize(width: contentSize.width, height: contentSize.height + toolbarHeight)
+        frame.size = NSSize(
+            width: contentSize.width + chrome.width,
+            height: contentSize.height + chrome.height
+        )
         if let visibleFrame {
             frame.origin.y = SettingsWindowSizing.clampedWindowOriginY(
                 proposedOriginY: previousTopEdge.map { $0 - frame.height } ?? frame.origin.y,
@@ -140,6 +142,13 @@ struct SettingsView: View {
             )
         }
         window.setFrame(frame, display: true, animate: false)
+    }
+
+    private static func settingsWindowChrome(for window: NSWindow) -> NSSize {
+        NSSize(
+            width: max(0, window.frame.width - window.contentLayoutRect.width),
+            height: max(0, window.frame.height - window.contentLayoutRect.height)
+        )
     }
 }
 
