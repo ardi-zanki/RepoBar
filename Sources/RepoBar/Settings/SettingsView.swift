@@ -57,16 +57,20 @@ struct SettingsView: View {
     }
 
     private func updateLayout(for tab: SettingsTab, animate: Bool) {
+        let contentSize = Self.resizeSettingsWindow(
+            width: tab.preferredWidth,
+            height: tab.preferredHeight,
+            animate: animate
+        )
         let change = {
-            self.contentWidth = tab.preferredWidth
-            self.contentHeight = tab.preferredHeight
+            self.contentWidth = contentSize.width
+            self.contentHeight = contentSize.height
         }
         if animate {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { change() }
         } else {
             change()
         }
-        Self.resizeSettingsWindow(width: tab.preferredWidth, height: tab.preferredHeight, animate: animate)
     }
 
     private static let settingsWindowIdentifier = "com_apple_SwiftUI_Settings_window"
@@ -87,18 +91,19 @@ struct SettingsView: View {
         return Set(titles)
     }
 
-    private static func resizeSettingsWindow(width: CGFloat, height: CGFloat, animate: Bool) {
+    private static func resizeSettingsWindow(width: CGFloat, height: CGFloat, animate: Bool) -> NSSize {
+        let desiredContentSize = NSSize(width: width, height: height)
         guard let window = NSApp.windows.first(where: {
             $0.identifier?.rawValue == self.settingsWindowIdentifier
                 || self.knownTabTitles.contains($0.title)
-        }) else { return }
+        }) else { return desiredContentSize }
 
         let toolbarHeight = window.frame.height - window.contentLayoutRect.height
-        guard toolbarHeight > 0 else { return }
+        guard toolbarHeight > 0 else { return desiredContentSize }
 
         let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame
         let contentSize = SettingsWindowSizing.clampedContentSize(
-            desired: NSSize(width: width, height: height),
+            desired: desiredContentSize,
             visibleFrame: visibleFrame,
             chrome: window.frameRect(forContentRect: .zero).size
         )
@@ -134,6 +139,7 @@ struct SettingsView: View {
             )
         }
         window.setFrame(frame, display: true, animate: animate)
+        return contentSize
     }
 }
 
