@@ -4,6 +4,7 @@ actor GitHubRequestRunner {
     private let etagCache: ETagCache
     private let backoff: BackoffTracker
     private let diag: DiagnosticsLogger
+    private let dataLoader: HTTPDataLoader
     private let logger = RepoBarLogging.logger("github-rest")
     private var lastRateLimitReset: Date?
     private var lastRateLimitError: String?
@@ -16,11 +17,13 @@ actor GitHubRequestRunner {
     init(
         etagCache: ETagCache = ETagCache.persistent(),
         backoff: BackoffTracker = BackoffTracker(),
-        diag: DiagnosticsLogger = .shared
+        diag: DiagnosticsLogger = .shared,
+        dataLoader: HTTPDataLoader = .live
     ) {
         self.etagCache = etagCache
         self.backoff = backoff
         self.diag = diag
+        self.dataLoader = dataLoader
     }
 
     func rateLimitReset(now: Date = Date()) -> Date? {
@@ -163,7 +166,7 @@ actor GitHubRequestRunner {
         let limiter = self.limiter(for: url)
         await limiter.acquire()
         do {
-            let result = try await URLSession.shared.data(for: request)
+            let result = try await self.dataLoader.data(for: request)
             await limiter.release()
             return result
         } catch {
