@@ -102,8 +102,7 @@ struct RecentListMenuTests {
 
         let titles = menu.items.map(\.title)
         #expect(Array(titles.suffix(2)) == ["", "Open 2 refs in Issue Navigator…"])
-        #expect(menu.items.last?.target === manager)
-        #expect(menu.items.last?.action == #selector(StatusBarMenuManager.openGitHubReferenceMatchesInIssueNavigator))
+        #expect(menu.items.last?.target is GitHubReferenceStatusCoordinator)
     }
 
     @MainActor
@@ -123,8 +122,8 @@ struct RecentListMenuTests {
         let item = try #require(manager.gitHubReferenceStatusItemForTesting())
         let button = try #require(item.button)
         #expect(item.menu == nil)
-        #expect(button.target === manager)
-        #expect(button.action == #selector(StatusBarMenuManager.gitHubReferenceStatusItemClicked(_:)))
+        #expect(button.target is GitHubReferenceStatusCoordinator)
+        #expect(button.action == #selector(GitHubReferenceStatusCoordinator.statusItemClicked(_:)))
     }
 
     private static func makeReference(number: Int) throws -> GitHubReferenceMatch {
