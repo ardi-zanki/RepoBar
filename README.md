@@ -189,7 +189,7 @@ Useful docs:
 
 ## Status
 
-RepoBar is early and moving quickly. The latest released version is 0.5.0, with smarter persistent caching, archive-backed fallback paths, rate-limit visibility, GitHub reference previews, and more robust menu behavior.
+RepoBar is early and moving quickly. See the [latest release](https://github.com/steipete/RepoBar/releases/latest) and [changelog](CHANGELOG.md) for current shipped behavior.
 
 ## License
 
