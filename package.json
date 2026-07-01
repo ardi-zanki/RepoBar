@@ -28,7 +28,7 @@
     "graphql": "^17.0.1"
   },
   "devDependencies": {
-    "@octokit/request": "^10.0.10",
+    "@octokit/request": "^10.0.11",
     "chalk": "^5.6.2",
     "commander": "^15.0.0",
     "dotenv-cli": "^11.0.0",
