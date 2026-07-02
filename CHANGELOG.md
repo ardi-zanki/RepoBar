@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.8.5 - Unreleased
+
 ## 0.8.4 - 2026-07-02
 
 - Coalesce concurrent OAuth token refreshes per account so rotating refresh tokens cannot race or overwrite newer credentials.
