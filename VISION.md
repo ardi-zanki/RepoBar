@@ -2,15 +2,11 @@
 
 RepoBar is a fast native maintainer cockpit. It should make repository pressure, CI, releases, and local checkout state legible without becoming a browser replacement.
 
-## Provider rule
+## GitHub-specific product
 
-GitHub remains the full-featured default. Another provider belongs in core only when one bounded maintainer can keep it trustworthy:
+RepoBar is built specifically for GitHub.com and GitHub Enterprise. It is not a general multi-provider repository client.
 
-- provider-owned API client in `RepoBarCore`, behind shared capability protocols;
-- HTTPS with platform trust; no ATS exceptions, HTTP fallback, redirect token forwarding, or self-signed bypass;
-- account-scoped credentials and caches; no token mirroring or cross-provider fallback;
-- provider-correct repository identity, subgroup paths, web links, and checkout URLs;
-- unsupported features hidden or rejected explicitly;
-- regression tests plus live app and CLI proof for that provider and GitHub.
-
-If those conditions cannot stay true, prefer a maintained fork or external integration over a partial compatibility layer in RepoBar.
+- Product behavior may rely on GitHub's repository, issue, pull request, Actions, release, authentication, and API semantics.
+- Do not add provider selection, credentials, API clients, compatibility layers, or conditional UI for other repository hosts to RepoBar core.
+- Shared Git and HTTP utilities are welcome when they directly improve the GitHub experience, not as extension points for additional providers.
+- Support for GitLab or other repository hosts belongs in a maintained fork or a separate tool.
