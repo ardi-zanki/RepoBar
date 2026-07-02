@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.8.4 - Unreleased
+## 0.8.4 - 2026-07-02
 
 - Coalesce concurrent OAuth token refreshes per account so rotating refresh tokens cannot race or overwrite newer credentials.
+- Keep repository submenus associated with the correct repository when GitHub's opaque node ID differs from its full name.
 - Persist the repository display limit from Settings and expose the active heatmap color control in General settings.
 - Keep every Settings tab inside the visible display frame, allow bounded manual resizing, and prevent the Repositories table from forcing the window under the Dock (thanks @Yuxin-Qiao). (#84)
 - Update Kingfisher to 8.10.0 for safer asynchronous image cancellation and macOS image decoding.
