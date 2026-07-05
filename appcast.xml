@@ -3,6 +3,21 @@
     <channel>
         <title>RepoBar</title>
         <item>
+            <title>0.8.5</title>
+            <pubDate>Sun, 05 Jul 2026 01:34:11 -0700</pubDate>
+            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
+            <sparkle:version>26</sparkle:version>
+            <sparkle:shortVersionString>0.8.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>RepoBar 0.8.5</h2>
+<ul>
+<li>Restore the signed-in account immediately after restarting RepoBar when its persisted credentials are still available.</li>
+</ul>
+<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.5/RepoBar-0.8.5.zip" length="26005767" type="application/octet-stream" sparkle:edSignature="E2HSNZTIwNlTlJ1++RVhNw+G9Sk2quZ0+BSc8+ke3KV1cKNMWlW81RIjB1pAOKcFKxHkzu7R6LENpbv436P2Bg=="/>
+        </item>
+        <item>
             <title>0.8.4</title>
             <pubDate>Thu, 02 Jul 2026 08:43:53 +0100</pubDate>
             <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
@@ -40,21 +55,6 @@
 <p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.3/RepoBar-0.8.3.zip" length="25813858" type="application/octet-stream" sparkle:edSignature="ebPqSCAyE+GjbhAMR8xMs14ULcYdx8eWRDkhcueBfIvP4uyDx8p8fJfspZGQh4pm4MmbsvyF8ixkfiyoSLWuBw=="/>
-        </item>
-        <item>
-            <title>0.8.2</title>
-            <pubDate>Fri, 12 Jun 2026 07:14:30 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
-            <sparkle:version>23</sparkle:version>
-            <sparkle:shortVersionString>0.8.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RepoBar 0.8.2</h2>
-<ul>
-<li>Streamline the GitHub API submenu by showing sample age once, while moving shared-budget guidance into a dedicated API settings tab.</li>
-</ul>
-<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.2/RepoBar-0.8.2.zip" length="33389017" type="application/octet-stream" sparkle:edSignature="8oetJWUfixEzPVuBMFJhd9twGYUs4shghET/sg1zkpX2c5XOGfOqkxGF05gwdOGDWNbHqFTSde8UHa1sWgeFAg=="/>
         </item>
     </channel>
 </rss>
