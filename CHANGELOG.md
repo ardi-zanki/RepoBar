@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.8.7 - Unreleased
+
 ## 0.8.6 - 2026-07-06
 
 - Replace the loading spinners in the menu with an animated contribution graph that spells "REPOBAR" while repositories and the contribution heatmap load, matching the repobar.app wordmark animation.
