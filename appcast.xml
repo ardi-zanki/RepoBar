@@ -3,6 +3,22 @@
     <channel>
         <title>RepoBar</title>
         <item>
+            <title>0.8.6</title>
+            <pubDate>Mon, 06 Jul 2026 01:16:31 -0700</pubDate>
+            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
+            <sparkle:version>27</sparkle:version>
+            <sparkle:shortVersionString>0.8.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>RepoBar 0.8.6</h2>
+<ul>
+<li>Replace the loading spinners in the menu with an animated contribution graph that spells &quot;REPOBAR&quot; while repositories and the contribution heatmap load, matching the repobar.app wordmark animation.</li>
+<li>Reimagine the repobar.app website as a dark, menu-bar-themed page with a live menu mockup, a contribution-graph wordmark, current features like the reference monitor and multi-account support, and the corrected macOS 15 minimum system requirement.</li>
+</ul>
+<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.6/RepoBar-0.8.6.zip" length="26030994" type="application/octet-stream" sparkle:edSignature="FMd4FttwKaoB6f2/Rc/n4aUbzcyRrt2F1lVwTB6IEm4MOjYderISbtEzyDXsSjzpfwfDG5B1OnL6s7IoREugAw=="/>
+        </item>
+        <item>
             <title>0.8.5</title>
             <pubDate>Sun, 05 Jul 2026 01:34:11 -0700</pubDate>
             <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
@@ -36,25 +52,6 @@
 <p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.4/RepoBar-0.8.4.zip" length="26002669" type="application/octet-stream" sparkle:edSignature="gT3YuQR97vjl7Cn+2g7YGplZPutSmrywFgA+v2kHzYtUIH4anEdO7qiclLLDZV6ditDSMdGtdX7Kd0ghIO96CA=="/>
-        </item>
-        <item>
-            <title>0.8.3</title>
-            <pubDate>Sat, 13 Jun 2026 12:34:16 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
-            <sparkle:version>24</sparkle:version>
-            <sparkle:shortVersionString>0.8.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RepoBar 0.8.3</h2>
-<ul>
-<li>Send optional AI summaries through the OpenAI Responses API directly and limit model choices to documented public OpenAI identifiers.</li>
-<li>Keep GitHub API usage in a compact, expandable Accounts settings section instead of a separate settings tab.</li>
-<li>Search accessible repositories by description, language, and topics, and open repository rows on the configured GitHub host with a double-click (thanks @udiedrichsen). (#80)</li>
-<li>Add opt-in release notifications for pinned repositories, including an optional pre-release toggle, first-refresh backlog protection, and rate-conscious polling at most every 15 minutes (thanks @LeoLin990405). (#82)</li>
-<li>Round compact stat badges (issue, PR, star, and release download counts) to the nearest thousand and million instead of truncating, so a count like 19,999 shows as &quot;20K&quot; rather than &quot;19K&quot; and matches GitHub&#x27;s own compact numbers (thanks @LeoLin990405). (#81)</li>
-</ul>
-<p><a href="https://github.com/steipete/RepoBar/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.8.3/RepoBar-0.8.3.zip" length="25813858" type="application/octet-stream" sparkle:edSignature="ebPqSCAyE+GjbhAMR8xMs14ULcYdx8eWRDkhcueBfIvP4uyDx8p8fJfspZGQh4pm4MmbsvyF8ixkfiyoSLWuBw=="/>
         </item>
     </channel>
 </rss>
